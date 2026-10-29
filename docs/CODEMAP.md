@@ -16,8 +16,8 @@
 | components | 1024+ |
 | test/dev | 1024+ |
 | library | 256+ |
+| services | 256+ |
 | backend/electron | 128+ |
-| services | 128+ |
 | utils | 128+ |
 | hooks | 64+ |
 | src (其他) | 64+ |
@@ -68,6 +68,7 @@
 | 32+ | `src/stores/useVisualizerSettingsStore.ts` |
 | 32+ | `src/types/localLibrary.ts` |
 | 32+ | `src/types/navidrome.ts` |
+| 32+ | `src/utils/appPlaybackHelpers.ts` |
 | 32+ | `src/utils/coverUrl.ts` |
 | 32+ | `src/utils/fontStacks.ts` |
 | 32+ | `src/utils/lyrics/graphemeTiming.ts` |
