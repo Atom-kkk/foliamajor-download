@@ -463,23 +463,49 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 
 ## 11. 开源 / 打包发布前必须修改的地方
 
-本分支的包信息已经改掉一部分（仓库名 `foliamajor-download`），下面这些仍需在公开分发前确认：
+上游的包信息指向 `chthollyphile/folia-major`、`top.izuna.foliamajor`。本分支已经把这些身份信息改成自己的，
+下面列出「已改」「还要你填」「刻意没改」三张清单。
 
-| 文件 | 字段 | 现值 | 为什么要改 |
-| --- | --- | --- | --- |
-| `package.json` | `build.appId` | `top.izuna.foliamajor`（上游值，**未改**） | 与官方安装包同 appId，两个包会互相覆盖/冲突。建议改成 `io.github.<github-owner>.foliamajordownload` 这类只属于自己的 id |
-| `package.json` | `build.productName` | `Folia`（上游值，**未改**） | 安装后在系统里与官方同名，用户分不清装的是哪个 |
-| `package.json` | `author` | `chthollyphile`（上游值，**未改**） | 会写进安装包元数据；本分支应署自己的名字，上游归属由 `NOTICE` 与 `CONTRIBUTORS.md` 保留 |
-| `package.json` / `README*` | `repository`、`build.publish[0].owner` | `<github-owner>` 占位 | 填你的 GitHub 用户名；`publish.repo` 已设为 `foliamajor-download` |
-| `package.json` | `version` | `0.7.21` | 与上游同版本号，无法区分；发首个包前改成自己的版本 |
-| `package.json` | `desktopName` / `build.linux.executableName` | `folia-major*` | 与 `packaging/linux/folia-major.desktop` 文件名绑定，改名要连文件一起改（不改也能用） |
-| `.github/workflows/` | 发布类与 triage 工作流 | 上游 CI | 部分工作流缺 secrets 会失败（不是每次都跑），见下方分类表 |
-| `NOTICE` | 维护者与年份 | `<维护者>` 占位 | 填写本分支的著作权人 |
+**已改好**（不需要再动）：
 
-### CI 工作流的处理建议
+| 位置 | 现值 | 影响 |
+| --- | --- | --- |
+| `package.json` `name` | `foliamajor-download` | Linux 包名、产物名 |
+| `package.json` `productName`（顶层与 `build`） | `Folia Download` | 安装后的应用名，与官方版区分 |
+| `package.json` `build.appId` | `com.foliamajordownload.folia` | 不再与官方安装包同 id，两个包可以共存 |
+| `electron/main.cjs` `WINDOWS_APP_USER_MODEL_ID` | `com.foliamajordownload.folia` | 与 appId 一致，任务栏分组与通知归属跟着走 |
+| `package.json` `version` | `0.8.0` | 高于上游 0.7.21，更新比较不会误判 |
+| `package.json` `repository`、`build.publish` | `<github-owner>` / `foliamajor-download` | 打包出的 `app-update.yml` 指向自己，不会去拉上游版本 |
+| `electron/main.cjs` `FOLIA_RELEASES_URL`、`FOLIA_GITHUB_REPOSITORY` | `<github-owner>` / `foliamajor-download` | 应用内「查看 Release」「检查更新」不再跳到上游 |
+| `packaging/linux/folia-major.desktop` `Name` | `Folia Download` | 应用菜单里显示的名字 |
+| `.github/workflows/` | 只剩 4 个不需要发布凭据的工作流 | 发布类与 triage 已移到 `workflows-disabled/`，不会再跑红 |
 
-`.github/workflows/` 里有 14 个上游工作流。它们在 fork 里会不会「跑红」，取决于触发条件和所需凭据
-（`GITHUB_TOKEN` 由 GitHub 自动提供，其余 secrets 不会随 fork 复制过来）：
+**还要你填**：
+
+| 位置 | 现值 | 说明 |
+| --- | --- | --- |
+| `<github-owner>`：`package.json` 的 `repository` 与 `publish.owner`、`electron/main.cjs` 的两处常量、两个 README 的克隆地址 | 占位 | 你的 GitHub 用户名。`grep -rn "<github-owner>" .` 一次全替换 |
+| `package.json` `author` | `chthollyphile`（上游） | 不改也能跑；换成自己的名字时建议同时填邮箱（deb / rpm 打包要 maintainer），上游归属已由 `NOTICE` 与 `CONTRIBUTORS.md` 保留 |
+| `NOTICE` 的 `<维护者>` | 占位 | 本分支的著作权人 |
+
+**刻意没改**：
+
+| 位置 | 值 | 原因 |
+| --- | --- | --- |
+| `package.json` `desktopName`、`build.linux.executableName`、`packaging/linux/folia-major.desktop` 文件名 | `folia-major*` | 三者互相绑定，改名要连文件名一起改；不影响功能与更新 |
+| `CONTRIBUTORS.md` | 上游贡献者名单 | 上游归属，不能删；本分支的贡献者可以往后追加 |
+| `dev/build/buildIdentity.mjs` 的 `OFFICIAL_BUILD_REPO` | 上游仓库名 | 有意保留：本分支构建出来的版本会被判定为「非官方构建」，混进 UA 的仓库名也是自己的 —— fork 的流量与问题反馈不该落回上游 |
+| `LICENSE` | AGPL-3.0 原文 | 衍生作品必须保留原样 |
+
+### CI 工作流：已按需要停用
+
+上游共 14 个工作流。本分支把依赖发布凭据、在 fork 里只会失败的 9 个移到了
+`.github/workflows-disabled/`（该目录有自己的 README 说明恢复方法），`.github/workflows/` 只留 4 个
+不需要额外凭据的：`pr-unit-tests`、`docker-stack-check`、`linux-arm64-package-check`、`codemap-sync`。
+
+下面这张表是上游各工作流的原始触发条件与缺口，留着是为了需要恢复时知道要配哪些 secrets：
+
+表里的「失败」都来自同一个原因：`GITHUB_TOKEN` 由 GitHub 自动提供，其余 secrets 不会随 fork 复制过来。
 
 | 文件 | 触发条件 | 在 fork 里的表现 | 缺什么 |
 | --- | --- | --- | --- |
@@ -494,8 +520,8 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 | `docker-stack-publish.yml` | `deploy/docker/VERSION` 变化 / 手动 | **失败** | `DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN` |
 | `sync-server-docker-publish.yml` | `sync-server/package.json` 变化 / 手动 | **失败** | 同上 |
 
-也就是说：日常真正会持续报错的是 `nightly-pre-release`（每天一次）和 `triage-issues`（有人开 issue 时），
-其余发布类平时不触发，一旦你改动对应的版本文件或手动触发才会失败。
+也就是说：原来日常真正会持续报错的只有 `nightly-pre-release`（每天一次）和 `triage-issues`（有人开 issue 时），
+其余发布类平时不触发 —— 这正是它们容易被忽略、一改动版本文件就突然失败的原因，所以一并停用了。
 
 这些工作流与应用的运行**无关**：本地 `npm run dev` / `build:electron` 完全不读 `.github`，
 源码编译出的程序也不会因为 CI 失败而少一行功能。它们只影响仓库页面的自动化与状态灯。

@@ -2265,12 +2265,14 @@ const MOD_SYSTEM_ENABLED_SETTING_KEY = 'MOD_SYSTEM_ENABLED';
 const DEFAULT_STAGE_API_PORT = 32107;
 const DEFAULT_OBS_BROWSER_SOURCE_PORT = 32108;
 const DEFAULT_LYRIC_API_PORT = 32109;
-const FOLIA_RELEASES_URL = 'https://github.com/chthollyphile/folia-major/releases';
+// 本分支的仓库与发布页：更新检查、Release 链接都按这里走，不要指回上游。
+// `<github-owner>` 是发布前要替换的占位（仓库其余位置同名占位，一次全替换即可）。
+const FOLIA_RELEASES_URL = 'https://github.com/<github-owner>/foliamajor-download/releases';
 const FOLIA_GITHUB_REPOSITORY = {
-  owner: 'chthollyphile',
-  repo: 'folia-major',
+  owner: '<github-owner>',
+  repo: 'foliamajor-download',
 };
-const WINDOWS_APP_USER_MODEL_ID = 'top.izuna.foliamajor';
+const WINDOWS_APP_USER_MODEL_ID = 'com.foliamajordownload.folia';
 const REMOTE_CONTROL_WINDOW_TITLE = 'Folia Remote';
 const WINDOW_PLAYBACK_HANDOFF_REQUEST_TIMEOUT_MS = 800;
 const bundledAppIconPath = path.join(__dirname, '../build/icon.png');

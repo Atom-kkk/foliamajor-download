@@ -1,6 +1,6 @@
 {
   "name": "foliamajor-download",
-  "productName": "Folia",
+  "productName": "Folia Download",
   "desktopName": "folia-major.desktop",
   "description": "Lyrics Reimagine",
   "author": {
@@ -12,7 +12,7 @@
     "url": "https://github.com/<github-owner>/foliamajor-download.git"
   },
   "private": true,
-  "version": "0.7.21",
+  "version": "0.8.0",
   "license": "AGPL-3.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -67,8 +67,8 @@
     "manual:ai-probe": "node test/manual/ai_probe.mjs"
   },
   "build": {
-    "appId": "top.izuna.foliamajor",
-    "productName": "Folia",
+    "appId": "com.foliamajordownload.folia",
+    "productName": "Folia Download",
     "beforePack": "build/beforePack.cjs",
     "afterPack": "build/afterPack.cjs",
     "electronLanguages": [
