@@ -37,7 +37,9 @@ const BravaisHomeExplore: React.FC<{
     onOpenGridView: (collection: LibraryCollectionDescriptor) => void;
 }> = ({ chrome, online, account: accountController, isInteractive, onPlaySong, onOpenGridView }) => {
     const { t, i18n } = useTranslation();
-    const isOn = online.accountView === 'authenticated' && online.canUseExplore;
+    // 探索页是平台自己的公开推荐页（平台的探索适配器本来就按「游客」写过一遍），没有账号也能看；
+    // 只有「无账户的平台」才没有这一页。
+    const isOn = online.canUseExplore && online.accountView !== 'accountless' && online.accountView !== 'resolving';
     const providerId = online.providerId as OnlineProviderId;
     const accountId = String(online.user?.id ?? '');
     // 与网格的探索页（ExploreSurface）同一个页键：换平台、账户或语言就是另一页。
@@ -67,16 +69,19 @@ const BravaisHomeExplore: React.FC<{
     }, []);
 
     const accountSeam = useBravaisHomeAccount(accountController, online);
-    const status = online.accountView === 'guest'
-        ? (online.needsRelogin ? t('status.loginExpired') : undefined)
+    // 列表为空时的说法：解析中 / 无账户各有一句；读到了但一条没有，才说「没有推荐」。
+    const emptyStatus = !feed || feed.status === 'loading'
+        ? t('playlist.loading')
+        : wall.emptyText ?? t('home.exploreEmpty');
+    const status = online.needsRelogin
+        ? t('status.loginExpired')
         : online.accountView === 'resolving'
             ? t('home.loadingLibrary')
             // 无账户的平台：与网格对同一状态的说法相同（OnlineProviderAccountlessPanel 的标题）。
             : online.accountView === 'accountless'
                 ? t('home.accountlessTitle', { provider: online.providerLabel })
-                : items.length > 0
-                    ? undefined
-                    : !feed || feed.status === 'loading' ? t('playlist.loading') : wall.emptyText ?? t('home.exploreEmpty');
+                // 游客也走这里：探索页本来就是平台的公开推荐页。
+                : items.length > 0 ? undefined : emptyStatus;
     const refreshTool = useMemo<BravaisHomeTool | null>(() => (isOn ? {
         id: 'refresh-explore',
         label: t('home.exploreRefresh'),

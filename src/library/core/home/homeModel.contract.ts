@@ -44,6 +44,8 @@ export type LibraryHomeOnlineSource = {
     providerLabel: string;
     provider?: ProviderAccountSummary;
     user: ProviderUser | null;
+    /** 当前是游客（没有真账号）：公开的推荐 / 排行榜照常看，账户歌单为空。 */
+    isGuest: boolean;
     accountView: LibraryHomeAccountView;
     /** 账户登录过期（provider 报 auth-required）。 */
     needsRelogin: boolean;

@@ -1,0 +1,101 @@
+Folia（增强分支）
+================
+
+本仓库是 Folia 的一个修改分支。
+
+原始项目
+--------
+
+  Folia — Lyrics Reimagined
+  https://github.com/chthollyphile/folia-major
+  许可证：GNU Affero General Public License v3.0（AGPL-3.0）
+
+  原始著作权归 chthollyphile 及 folia-major 的贡献者所有，名单见 CONTRIBUTORS.md。
+
+本分支的修改
+------------
+
+  修改时间：2026 年 10 月
+  修改内容：新增在线音源（酷我、星海、自定义 HTTP 源）、会员 / 付费歌的兜底换源、
+            试听片段识别、同名不同版本排除、完整版下载、游客身份、聚合搜索、
+            歌词样式按句随机，以及若干行为修正。
+
+  本仓库的首个提交 `baseline: folia-major upstream snapshot` 是**未修改**的上游快照，
+  之后的所有提交构成本分支的改动。因此每一个被修改的文件与修改时间都可以用 git 复核：
+
+      git log --oneline
+      git diff baseline..HEAD --stat
+
+  逐项的修改说明（改了什么、为什么、边界在哪）见：
+      docs/fork-changes.md
+
+许可证
+------
+
+  本分支是上游项目的衍生作品，依 AGPL-3.0 第 5 条，整体继续以 AGPL-3.0 分发：
+
+    * LICENSE 中的 AGPL-3.0 原文未作任何修改，必须随本仓库一同分发；
+    * 本文件中保留上游的著作权归属声明；
+    * 本分支的修改同样以 AGPL-3.0 授权，不加任何额外限制。
+
+  本分支与上游作者无隶属关系，也未获其背书。上游的 Release、镜像、社群与
+  发行渠道（AUR、Flatpak 等）均不属于本分支。
+
+  本项目不包含任何音频、歌词或封面内容；相关内容版权归对应权利人所有。
+  本项目仅供个人学习、技术交流与非营利测试使用，请勿用于商业用途。
+
+  维护者：<维护者>（发布前填写）
+
+
+Folia (enhanced branch)
+========================
+
+This repository is a modified fork of Folia.
+
+Original project
+----------------
+
+  Folia — Lyrics Reimagined
+  https://github.com/chthollyphile/folia-major
+  License: GNU Affero General Public License v3.0 (AGPL-3.0)
+
+  Copyright (C) chthollyphile and the folia-major contributors (see CONTRIBUTORS.md).
+
+Modifications in this fork
+--------------------------
+
+  Date: October 2026
+  Scope: new online sources (Kuwo, Xinghai, a custom HTTP source), a fallback for
+         permission-locked songs, clip detection, same-name-different-version exclusion,
+         full-track download, guest access, aggregate search, per-line random lyric
+         styles, and a few behaviour fixes.
+
+  The first commit of this repository, `baseline: folia-major upstream snapshot`, is an
+  unmodified upstream snapshot; every commit after it makes up this fork's changes. The
+  modified files and their dates are therefore verifiable with git:
+
+      git log --oneline
+      git diff baseline..HEAD --stat
+
+  A per-item account of what changed, why, and where the boundaries are:
+      docs/fork-changes.md
+
+License
+-------
+
+  This fork is a derivative work of the upstream project and is distributed under
+  AGPL-3.0 as required by section 5 of that license:
+
+    * the AGPL-3.0 text in LICENSE is unmodified and must ship with this repository;
+    * the upstream copyright notice is preserved in this file;
+    * the modifications are likewise licensed under AGPL-3.0, with no additional terms.
+
+  This fork is not affiliated with, nor endorsed by, the upstream author. Upstream
+  releases, mirrors, community channels and distribution packages (AUR, Flatpak, ...)
+  do not belong to this fork.
+
+  This project contains no audio, lyrics or cover art; those rights belong to their
+  respective owners. It is provided for personal study, technical exchange and
+  non-commercial testing only.
+
+  Maintainer: <maintainer> (fill in before publishing)

@@ -19,6 +19,9 @@ UI / hooks / stores / app services
                  -> ytmTransport.ts（YouTube Music 的受限 IPC 边界，仅桌面端）
             -> spotifyProvider.ts
                  -> spotifyTransport.ts（Spotify 的受限 IPC 边界，仅桌面端）
+            -> custom/customProvider.ts（自定义/第三方源，仓库之外的一个 HTTP 服务）
+       -> guest/（注册时统一包一层：没有登录的平台以「游客」身份被使用）
+       -> routing/（权限锁定的歌在这一层改走兜底源）
        -> account/（各平台账号共用的逻辑，只从 omni 进入）
        -> login/（登录失败的分类和请求时限，不认识任何平台）
        -> providerAccountCache.ts / providerStorage.ts
@@ -27,8 +30,12 @@ UI / hooks / stores / app services
 
 图里的 `<id>Provider.ts` 和 `<id>Transport.ts` 都在各平台自己的目录 `<id>/` 里（例如 `qq/qqProvider.ts`）。网易云没有单独的 transport，请求在 `netease/netease.ts`。
 
-当前 registry 注册 `netease`、`kugou`、`qq`，以及桌面端的 `bodian`、`ytm`（YouTube Music）和 `spotify`。波点接入状态、接口与剩余验收见
+当前 registry 注册 `netease`、`kugou`、`qq`，以及桌面端的 `bodian`、`ytm`（YouTube Music）和 `spotify`；另外注册 `custom`（自定义/第三方源，见 [`custom/README.md`](custom/README.md)）。波点接入状态、接口与剩余验收见  
 [`docs/bodian.md`](../../../docs/bodian.md)；支持喜欢与自建歌单歌曲增删，收藏写入尚未实现。Navidrome 是独立的 Subsonic 服务，入口是 `src/services/navidromeService.ts`，不属于 Omni provider。
+
+不登录也能用：`guest/guestAccess.ts` 在 registry 注册时给每个有 `auth` 的 provider 包一层。`getLoginStatus` 真登录回真账号、否则回一个稳定的游客（`guest` / 「游客」），游客的歌单与喜欢清单直接答空，于是 `getUserPlaylists` 这一路不会因为「没有 userId」而崩，界面显示「游客」而不是一条错误。关掉这一层（`GUEST_ACCESS_ENABLED`）就回到上游「没人登录就是没人」的行为。
+
+权限锁定的歌（会员 `fee 1`、数字专辑 `fee 4`、平台自报 `restricted` 且没有可播档位、灰歌 `st < 0`）在 `routing/lockedSongRouting.ts` 里改由兜底源（默认 `custom`）提供地址，入口是 `omni.getAudioSource`：换源只换这一首这一次的地址，队列/历史/封面/歌词/收藏仍对着原来的歌；兜底失败（找不到、连不上、格式不对）一律回 `null`，内置源按原来的样子走试听或报错。网络错误、超时、下架都不触发换源。
 
 登录的分工：provider 把后端的回答翻成 `LoginState`。失败带着平台的原话（`message`）和事实（`failure`：码、原话、HTTP 状态、要等多久，或者直接点名的情况，比如 QQ 的登录设备超限 `device-limit`）；这一次检查在网络这一层没拿到回答、码在平台那边还有效时标 `transient`，登录接着检查。要码与生成二维码拿不到 key / 图片时直接抛错，不交出空值。情况怎么分在 `login/loginFailureCase.ts`，平台自己的码是什么意思由它的 `describeLoginFailure` 说。登录失败后由登录调用一次 `omni.runLoginSelfCheck` 主动自检（`loginSelfCheck.ts`），结果进诊断报告；`omni.getLoginDiagnostics` 的 provider 段每一行都由 `login/loginDiagnosticReport.ts` 的 `diagnosticLine` 写，放进去的文字先洗过：登录凭据、IP 和账号不进报告。
 
@@ -93,6 +100,7 @@ UI / hooks / stores / app services
 
 不改内建代码、由 mod 加一个平台的做法，见 [`docs/folium/api.md`](../../../docs/folium/api.md) 和 [`docs/folium/contributing.md`](../../../docs/folium/contributing.md)。这条路还是实验接口，能力比内建平台少，动手前先读 `contributing.md` 开头说的接口边界。
 
+
 ## Public contract
 
 调用前先看 `omni.ts` 的方法和 `src/types/onlineMusic.ts` 的类型。常用入口按能力分组：
@@ -113,6 +121,7 @@ UI / hooks / stores / app services
 | 外链与引用 | `canResolveCatalogRef`、`resolveCatalogRefs`、`getSongPageUrl` | 共享 `catalogRefs.ts` 的 provider-aware 引用 |
 
 共享类型包括 `UnifiedSong`、`OmniCollection`、`OmniPage`、`OmniLyricsResult`、`OmniAudioSource`、`OmniUser`、`OmniError`、`OmniSongUnavailableReason`、`OmniProviderCapabilities`。调用方不能依赖 provider 的 raw field、numeric id 单独比较或 raw response envelope。
+
 
 ## Provider and cache files
 

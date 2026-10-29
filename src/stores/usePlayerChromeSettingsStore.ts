@@ -95,7 +95,7 @@ export const usePlayerChromeSettingsStore = create<PlayerChromeSettingsState>((s
     ),
     hidePlayerRightPanelButton: getStoredBoolean('hide_player_right_panel_button', false),
     alwaysShowPlayerBackButton: getStoredBoolean('always_show_player_back_button', false),
-    alwaysShowTrackSwitchButtons: getStoredBoolean('always_show_track_switch_buttons', false),
+    alwaysShowTrackSwitchButtons: getStoredBoolean('always_show_track_switch_buttons', true),
     alwaysShowMainWindowTitlebar: getStoredBoolean('always_show_main_window_titlebar', false),
     hideFullscreenButton: getStoredBoolean('hide_fullscreen_button', false),
     useNativeMacFullscreenButton: getStoredBoolean('use_native_mac_fullscreen_button', false),

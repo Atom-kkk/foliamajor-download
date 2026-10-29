@@ -64,6 +64,10 @@ import { createAccountMoments } from './account/readMoments';
 import type { AccountMoment } from './account/readMoments';
 import { createAccountReads } from './account/accountRead';
 import type { AccountReadOutcome, AccountReadReason } from './account/accountRead';
+import { forgetFallbackLookups, resolveLockedSongAudio } from './routing/lockedSongRouting';
+import { isClipAudio } from './audioProbe';
+import { isGuestUser } from './guest/guestAccess';
+import { lockedSongFallbackProviderId } from './custom/customSourceConfig';
 
 // src/services/onlineMusic/omni.ts
 // Online Music Network Interface (Omni) - a unified interface for interacting with multiple online music providers.
@@ -392,6 +396,90 @@ const withActiveProvider = async <T>(run: (provider: OnlineMusicProvider) => Pro
     return result;
 };
 
+/** 聚合搜索最多再问几个源。每个都要一次网络请求，多问一个就多等一截。 */
+const AGGREGATE_MAX_EXTRA_SOURCES = 3;
+/** 一次聚合搜索的预算：等最慢的那个源，超过就当作它没回答。 */
+const AGGREGATE_SEARCH_TIMEOUT_MS = 3_500;
+/** 除活跃源外，按这个顺序挑：先挑不需要登录、地址也稳的。 */
+const AGGREGATE_SOURCE_ORDER: OmniProviderId[] = ['kuwo', 'qq', 'kugou', 'bodian', 'ytm', 'spotify'];
+
+const withSearchTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('search timed out')), ms);
+    promise.then(
+        value => { clearTimeout(timer); resolve(value); },
+        error => { clearTimeout(timer); reject(error); },
+    );
+});
+
+/** 去重键：标题与歌手去掉空白与标点，大小写不敏感。 */
+const searchResultKey = (song: SongResult): string => {
+    const name = String(song.name ?? '').toLowerCase().replace(/[\s()（）[\]【】\-_.·]/g, '');
+    const artists = (song.artists ?? []).map(entry => entry.name).join('').toLowerCase().replace(/\s/g, '');
+    return `${name}|${artists}`;
+};
+
+/**
+ * 聚合搜索：活跃源 + 最多三个其它可搜索源，并发查，合并去重。
+ *
+ * 去重时**保留活跃源那一条**——它的封面与元数据最全，界面不该因为聚合而掉封面。
+ * 同一首歌在别的源上能不能播完整版，由取址时的兜底路由负责（`routing/lockedSongRouting.ts`），
+ * 不在这里换条目。
+ */
+/** 同一句查询 5 秒内复用：搜索框边打边搜时，别为同一个词把每个源都再问一遍。 */
+const AGGREGATE_SEARCH_CACHE_MS = 5_000;
+let lastAggregateSearch: { query: string; limit: number; at: number; page: OmniPage<UnifiedSong> } | null = null;
+
+const aggregateSearch = async (query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> => {
+    const cached = lastAggregateSearch;
+    if (cached && cached.query === query && cached.limit === page.limit && Date.now() - cached.at < AGGREGATE_SEARCH_CACHE_MS) {
+        return cached.page;
+    }
+
+    const active = requireOnlineMusicProvider(activeProviderId());
+    const generation = activeRequestGeneration;
+
+    const extras = AGGREGATE_SOURCE_ORDER
+        .filter(id => id !== active.id)
+        .map(id => getOnlineMusicProvider(id))
+        .filter((provider): provider is OnlineMusicProvider => Boolean(provider))
+        .filter(provider => providerSupports(provider, 'search') && Boolean(provider.search))
+        .filter(provider => provider.getAvailability?.().configured !== false)
+        .slice(0, AGGREGATE_MAX_EXTRA_SOURCES);
+
+    const sources = [active, ...extras];
+    const settled = await Promise.allSettled(sources.map(provider => withSearchTimeout(
+        provider.search!.searchSongs(query, page.limit, 0),
+        AGGREGATE_SEARCH_TIMEOUT_MS,
+    )));
+
+    // 账号切换期间到的结果不要（和单源路径同一个约定）。
+    if (generation !== activeRequestGeneration || active.id !== activeProviderId()) {
+        throw new DOMException('Active online provider changed', 'AbortError');
+    }
+
+    const merged: UnifiedSong[] = [];
+    for (const result of settled) {
+        if (result.status === 'fulfilled') merged.push(...result.value.items);
+    }
+
+    const isFromActive = (song: UnifiedSong) => song.sourceRef.kind === 'online' && song.sourceRef.providerId === active.id;
+    const best = new Map<string, UnifiedSong>();
+    for (const song of merged) {
+        const key = searchResultKey(song);
+        const current = best.get(key);
+        if (!current || (isFromActive(song) && !isFromActive(current))) best.set(key, song);
+    }
+
+    const items = [...best.values()];
+    const result: OmniPage<UnifiedSong> = {
+        items: items.slice(0, page.limit),
+        hasMore: items.length > page.limit,
+        nextOffset: page.offset + Math.min(items.length, page.limit),
+    };
+    lastAggregateSearch = { query, limit: page.limit, at: Date.now(), page: result };
+    return result;
+};
+
 export const omni = {
     invalidateActiveRequests(): void {
         activeRequestGeneration += 1;
@@ -414,14 +502,20 @@ export const omni = {
         const accounts = useOnlineProviderAccountStore.getState().accounts;
         return listOnlineMusicProviders().map(provider => {
             const account = accounts[provider.id];
+            // 游客（guest/guestAccess.ts）：账号层有一个确定的 userId，歌单与喜欢清单照常答空。
+            // `user` 必须原样带上——首页的推荐 / 公开歌单以「provider + userId」为归属，抹成 null 会让
+            // 游客的首页一条都不读（这正是未登录首页全空的原因）。界面靠 `guest` 标志与 `status:'anonymous'`
+            // 显示「未登录」，两条信息各管一件事。
+            const guest = isGuestUser(account?.user);
             return {
                 providerId: provider.id,
                 displayName: provider.displayName,
                 shortName: provider.shortName || provider.displayName,
                 availability: provider.getAvailability?.() ?? { configured: true },
                 requiresAccount: provider.capabilities.auth,
-                status: account?.status || 'unknown',
+                status: guest ? 'anonymous' : (account?.status || 'unknown'),
                 user: account?.user || null,
+                ...(guest ? { guest: true as const } : {}),
                 collections: account?.collections || [],
                 error: account?.error,
                 hydration: account?.hydration || 'loading',
@@ -479,10 +573,17 @@ export const omni = {
     },
 
     async searchSongs(query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> {
-        return withActiveProvider(async provider => {
-            if (!providerSupports(provider, 'search') || !provider.search) return emptyPage(page.offset);
-            return provider.search.searchSongs(query, page.limit, page.offset);
-        });
+        const trimmed = query.trim();
+        if (!trimmed) return emptyPage(page.offset);
+        // 第一页聚合（活跃源 + 最多三个其它源）；翻页仍走活跃源——每个源的游标不同，
+        // 混在一起翻会重复或跳条。
+        if (page.offset > 0) {
+            return withActiveProvider(async provider => {
+                if (!providerSupports(provider, 'search') || !provider.search) return emptyPage(page.offset);
+                return provider.search.searchSongs(trimmed, page.limit, page.offset);
+            });
+        }
+        return aggregateSearch(trimmed, page);
     },
 
     async searchProviderSongs(providerId: OmniProviderId, query: string, page: PageInput): Promise<OmniPage<UnifiedSong>> {
@@ -726,10 +827,13 @@ export const omni = {
     }> {
         return withActiveProvider(async provider => {
             const recommendations = provider.recommendations;
+            // 游客没有「私人」FM：那一路对匿名会话只会回一首和谁都一样的歌，失败还会把整份 feed 标成
+            // partial（于是每次进电台都重读）。只问公开的两块：每日推荐（匿名也有 3 首）与推荐歌单。
+            const guest = isGuestUser(useOnlineProviderAccountStore.getState().accounts[provider.id]?.user);
             // 三块各自成败：一块失败（例如日推被上游拒绝）只让那一块为空、结果标成 partial，不把 FM 与推荐歌单
             // 一起拖下去；三块都失败才算这次首页推荐失败。作废（AbortError）不算某一块的失败，整次照常作废。
             const [personalFm, dailySongs, recommendedCollections] = await Promise.allSettled([
-                recommendations?.getPersonalFm?.() ?? [],
+                guest ? [] : (recommendations?.getPersonalFm?.() ?? []),
                 recommendations?.getDailySongs?.() ?? [],
                 recommendations?.getRecommendedCollections?.(limit) ?? [],
             ]);
@@ -811,21 +915,29 @@ export const omni = {
     async getAudioSource(song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> {
         const provider = providerForSong(song);
         const level = audioQualityFor(provider.id, quality);
-        let source: OmniAudioSource | null;
-        try {
-            source = await runRequest(provider, 'audio', async () => await (provider.playback?.getAudioSource(song, level) ?? null));
-        } catch (error) {
-            // The provider gave no address. An extension may still give one, as it may where the provider answers null;
-            // without one the very error goes on, for the caller to sort (failure/onlineFailureCase.ts).
-            const fromHook = await applyOmniAudioHook(song, null);
-            if (fromHook?.url) return fromHook;
-            throw error;
-        }
+        // 兜底源只在**内置源给不出完整版**时接手：没有地址，或者只给了试听片段。
+        // 顺序是这里最容易搞错的一处：以前是「先按 fee/权限判定，再直接问兜底源」，那样一首本来
+        // 能完整播放的歌，只要被打上 fee=1 就再也没机会被内置源回答，直接换成兜底源的试听。
+        // 现在先问内置源，拿到 preview 或失败之后才兜底。
+        //
+        // 放在这里而不是 restorePlaybackSource.ts：缓存键、级别记录、ReplayGain、扩展钩子都在这个
+        // 函数后面，预取和会话恢复也走同一条路。
+        //
+        // 档位要先按「兜底源分得清的档」收敛一次再问它：一个只到 high 的源被问了 lossless，只会
+        // 给回一个 high 的文件，然后再被当成 lossless 记进缓存。`lockedSongFallbackProviderId()`
+        // 永不返回空（没配就是 `custom`）；这个 id 没注册时 `audioQualityFor` 按「没有声明档位」
+        // 处理（standard/high/lossless/hires），而且这个值只在桥接真拿到地址时才会被用到，
+        // 那种情况下 provider 一定注册着——所以不存在「拿不到 id 就不 clamp」的退化路径。
+        const fallbackProviderId = lockedSongFallbackProviderId();
+        const fallbackLevel = audioQualityFor(fallbackProviderId, level);
+        // 一个地址到手之后的收尾只写一处：ReplayGain、URL 的级别与试听标记、扩展钩子。内置源与兜底源
+        // 都从这里出去，免得两份收尾各活各的。
+        //
         // Written here rather than at either caller because this is the only moment a provider ever
         // states a track's ReplayGain, and both callers - the prefetch pass and playback itself -
         // may be the one that happens to see it. See getCachedSongReplayGain for what is lost
         // otherwise: the URL is never fetched again once the bytes are cached.
-        if (source?.replayGain) void saveSongReplayGain(song, source.replayGain);
+        //
         // The level asked for, not `source.quality`: a provider may serve a lower one, and a reader
         // of the media cache asks with the level the preference resolves to. Noted before the hook
         // below, so a URL an extension swaps in stays of an unknown level, and is not known to be a
@@ -833,15 +945,70 @@ export const omni = {
         // (A provider that lists the levels it tells apart is the exception: where it names another
         // of them, the file is that level's own, and a copy of it is kept as of that level. Kept as
         // of the level asked for, it would play in that level's place for good.)
-        const listed = provider.playback?.audioQualityLevels;
-        if (source?.url) {
-            noteAudioSourceLevel(source.url, {
-                level: listed?.includes(source.quality) ? source.quality : level,
-                preview: Boolean(source.preview),
-            });
+        const finish = (
+            source: OmniAudioSource | null,
+            listed?: readonly AudioQualityPreference[],
+        ): Promise<OmniAudioSource | null> => {
+            if (source?.replayGain) void saveSongReplayGain(song, source.replayGain);
+            if (source?.url) {
+                noteAudioSourceLevel(source.url, {
+                    level: listed?.includes(source.quality) ? source.quality : level,
+                    preview: Boolean(source.preview),
+                });
+            }
+            // Extension layers (Folium omni hooks) may swap the URL; the ReplayGain above stays the provider's.
+            return applyOmniAudioHook(song, source);
+        };
+        let source: OmniAudioSource | null = null;
+        let failure: unknown = null;
+        try {
+            source = await runRequest(provider, 'audio', async () => await (provider.playback?.getAudioSource(song, level) ?? null));
+        } catch (error) {
+            failure = error;
         }
-        // Extension layers (Folium omni hooks) may swap the URL; the ReplayGain above stays the provider's.
-        return applyOmniAudioHook(song, source);
+
+        // 平台没标 preview，给的却可能是片段（有的平台直接回一条 30 秒的 URL，`freeTrialInfo`
+        // 却是空的）。**每首都量一次**：一次 HEAD 几十毫秒，比「猜哪些歌可能受限」可靠——
+        // 从推荐/歌单进来的歌经常不带 fee，按权限标记筛会把它们整批漏掉。
+        let servedAsClip = false;
+        if (source?.url && !source.preview && song.durationMs > 60_000) {
+            servedAsClip = await isClipAudio(source.url, song.durationMs);
+            if (servedAsClip) {
+                console.info('[ClipProbe] 这条地址比这首歌短得多，改问兜底源', {
+                    song: song.name,
+                    expectedMs: song.durationMs,
+                });
+            }
+        }
+
+        // 内置源没有完整版（无地址、标了试听、或实测是片段）时，才给兜底源一次机会。
+        if (!source?.url || source.preview || servedAsClip) {
+            console.info(`[Fallback] 内置源没有完整版，开始问兜底源：${song.name}（preview=${Boolean(source?.preview)} noUrl=${!source?.url} clipped=${servedAsClip}）`);
+            let bridged: OmniAudioSource | null = null;
+            try {
+                bridged = await resolveLockedSongAudio(song, fallbackLevel, { force: true });
+            } catch (error) {
+                console.warn('[Omni] Fallback routing failed; the built-in source answer stands', error);
+            }
+            if (bridged) {
+                // 片段校验在路由里已经做过（每个候选都会实测一次），这里直接采用。
+                // 兜底源自己的档位交给 finish：它声明了另一档，副本就按那一档记（否则按被问的那一档）。
+                return finish(bridged, getOnlineMusicProvider(fallbackProviderId)?.playback?.audioQualityLevels);
+            }
+        }
+
+        if (failure) {
+            // The provider gave no address. An extension may still give one, as it may where the provider answers null;
+            // without one the very error goes on, for the caller to sort (failure/onlineFailureCase.ts).
+            const fromHook = await applyOmniAudioHook(song, null);
+            if (fromHook?.url) return fromHook;
+            throw failure;
+        }
+        // 兜底也没拿到完整版：把这条片段标成 preview，让界面说「试听」，而不是把 30 秒当整首。
+        if (servedAsClip && source) {
+            return finish({ ...source, preview: true }, provider.playback?.audioQualityLevels);
+        }
+        return finish(source, provider.playback?.audioQualityLevels);
     },
 
     // The level a URL handed out by `getAudioSource` was asked for at. Undefined for any other URL

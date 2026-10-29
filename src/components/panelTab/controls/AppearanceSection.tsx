@@ -126,6 +126,8 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
     const previewClock = usePreviewClock({ mode: visualizerMode, paused: openPicker === null });
     const visualizerTunings = useVisualizerTunings();
     const lyricsFontScale = useTypographySettingsStore(state => state.lyricsFontScale);
+    const randomVisualizerModeLines = useVisualizerSettingsStore(state => state.randomVisualizerModeLines);
+    const setRandomVisualizerModeLines = useVisualizerSettingsStore(state => state.handleSetRandomVisualizerModeLines);
     const pictureLook = useMemo<LyricPreviewLook>(() => ({ visualizerTunings, lyricsFontScale }), [visualizerTunings, lyricsFontScale]);
     const pictureBackground = useVisualizerBackgroundConfig();
 
@@ -255,6 +257,18 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
                         params={backgroundQuickControls}
                     />
                 </LyricPreviewProvider>
+            </div>
+
+            {/* 逐句随机换样式：和「每首歌随机」是同一套机制，只是按歌词行数触发。 */}
+            <div className="flex min-h-11 items-center gap-3 py-1.5">
+                <span id="random-lyric-style-label" className="min-w-0 flex-1 text-sm leading-5">
+                    {t('ui.randomLyricStyle')}
+                </span>
+                <Toggle
+                    checked={randomVisualizerModeLines > 0}
+                    onChange={enabled => setRandomVisualizerModeLines(enabled ? 4 : 0)}
+                    labelledBy="random-lyric-style-label"
+                />
             </div>
 
             {/* Only the switch turns it; the text names it for a screen reader. */}

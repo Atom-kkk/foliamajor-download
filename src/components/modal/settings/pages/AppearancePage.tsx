@@ -26,6 +26,7 @@ const AI: SettingsGroupDef = { id: 'electronSettings', titleKey: 'options.electr
 
 const O = {
     lyricsAnimation: option(LYRICS, 'lyricsAnimationAdjust', 'options.lyricsAnimationAdjust'),
+    randomLyricStyle: option(LYRICS, 'randomLyricStyle', 'options.randomLyricStyle'),
     daylight: option(THEME, 'daylightMode', 'options.daylightMode'),
     preset: option(THEME, 'themePreset', 'options.themePresets'),
     themePark: option(THEME, 'openThemePark', 'options.openThemePark'),
@@ -96,6 +97,8 @@ const AppearancePage: React.FC = () => {
             useSystemProxy: electronSettings.USE_SYSTEM_PROXY_FOR_AI === true,
         }, usesOpenAi ? savedAiApiKeys.OPENAI_API_KEY : savedAiApiKeys.GEMINI_API_KEY);
     const setAi = (patch: Partial<typeof electronSettings>) => setElectronSettings({ ...electronSettings, ...patch });
+    const randomVisualizerModeLines = useVisualizerSettingsStore(state => state.randomVisualizerModeLines);
+    const setRandomVisualizerModeLines = useVisualizerSettingsStore(state => state.handleSetRandomVisualizerModeLines);
     const savedKeyHint = (key: AiApiKeyName) => (savedAiApiKeys[key] ? t('options.aiApiKeySavedDesc') : undefined);
     // The saved OpenAI-compatible key is sent only to the endpoint it was saved for: say so while the
     // URL in the form points elsewhere and no replacement key has been typed.
@@ -111,6 +114,12 @@ const AppearancePage: React.FC = () => {
                 {nativeBlurEnabled && <Row notice={t('options.nativeBlurBackgroundNotice')} />}
                 <Row option={O.lyricsAnimation} hint={t('options.lyricsRendererDesc')} onClick={onOpenVisPlayground}>
                     <Value>{getVisualizerModeLabel(visualizerMode, t)}</Value>
+                </Row>
+                <Row option={O.randomLyricStyle} note={t('options.randomLyricStyleDesc')}>
+                    <Toggle
+                        checked={randomVisualizerModeLines > 0}
+                        onChange={enabled => setRandomVisualizerModeLines(enabled ? 4 : 0)}
+                    />
                 </Row>
             </Group>
 

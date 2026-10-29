@@ -95,6 +95,8 @@ const PlayerBarModButtonsProbe: React.FC = () => {
                     likeDisabled: false,
                     invokeCommandById: () => { },
                     canInvokeCommandById: () => true,
+                    onDownload: () => {},
+                    canDownload: false,
                 }}
                 onCommitBottomBarOffset={() => { }}
             />

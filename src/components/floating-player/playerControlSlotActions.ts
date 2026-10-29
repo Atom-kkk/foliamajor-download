@@ -1,4 +1,4 @@
-import { ChartBar, Crosshair, Heart, ListMusic, PanelsTopLeft, Repeat, Shuffle, SkipBack, SkipForward, Timer, Volume2 } from 'lucide-react';
+import { ChartBar, Crosshair, Download, Heart, ListMusic, PanelsTopLeft, Repeat, Shuffle, SkipBack, SkipForward, Timer, Volume2 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PlayerControlSlotActionId } from '../../types/playerControlSlots';
 import { noteLoopButtonPress } from '../../services/ponder/loopShuffleHint';
@@ -29,6 +29,9 @@ export type PlayerControlSlotContext = {
     likeDisabled: boolean;
     onToggleTimeline: () => void;
     hasLyrics: boolean;
+    /** 下载当前歌曲（完整版）；桌面端之外恒为 false。 */
+    onDownload: () => void;
+    canDownload: boolean;
     /**
      * 命令面板的 invokeCommandById：带 surface 的打开面板，不带的直接执行。
      * 打开界面的槽位全部走它，而不是自己去开侧边面板 tab。
@@ -66,6 +69,7 @@ export const PLAYER_CONTROL_SLOT_OPTIONS: readonly { id: PlayerControlSlotAction
     { id: 'song-wall', icon: PanelsTopLeft, labelKey: 'options.playerControlSlotAction_songWall' },
     { id: 'sleep-timer', icon: Timer, labelKey: 'options.playerControlSlotAction_sleepTimer' },
     { id: 'locate', icon: Crosshair, labelKey: 'options.playerControlSlotAction_locate' },
+    { id: 'download', icon: Download, labelKey: 'options.playerControlSlotAction_download' },
 ];
 
 /**
@@ -173,6 +177,15 @@ export const resolvePlayerControlSlot = (
                 disabled: !context.canInvokeCommandById('locate-playing-song'),
                 onActivate: () => context.invokeCommandById('locate-playing-song'),
                 labelKey: 'options.playerControlSlotAction_locate',
+            };
+        case 'download':
+            return {
+                icon: Download,
+                filled: false,
+                active: false,
+                disabled: !context.canDownload,
+                onActivate: context.onDownload,
+                labelKey: 'options.playerControlSlotAction_download',
             };
         case 'lyrics-timeline':
         default:

@@ -17,6 +17,8 @@ import type { BravaisHomeAccount } from './bravaisHomeModels';
 const describeProviderStatus = (provider: ProviderAccountSummary, t: TFunction): string => {
     if (!provider.availability.configured) return t('libraryBravaisAccount.notConfigured');
     if (provider.requiresAccount === false) return t('home.providerNoAccount');
+    // 游客不是账号：读屏名与 title 说「未登录」，别把「游客」当成一个昵称念出来。
+    if (provider.guest) return t('libraryBravaisAccount.notSignedIn');
     return provider.user?.nickname || t('libraryBravaisAccount.notSignedIn');
 };
 
@@ -25,7 +27,9 @@ export const useBravaisHomeAccount = (account: LibraryAccountController, online:
     const { providers, activeProviderId } = useLibraryAccountProviders(account);
     const current = providers.find(provider => provider.providerId === activeProviderId);
     const detail = current ? describeProviderStatus(current, t) : '';
-    const nickname = current?.availability.configured && current.requiresAccount !== false ? current.user?.nickname || null : null;
+    // 游客的 user 只是公开数据的归属 id，不当作账号名显示（否则账户位会写「游客」而不是「连接」）。
+    const signedIn = current?.guest !== true && current?.availability.configured && current.requiresAccount !== false;
+    const nickname = signedIn ? current?.user?.nickname || null : null;
     const avatarUrl = nickname ? current?.user?.avatarUrl || null : null;
     const guest = online.accountView === 'guest';
     const opensOn = guest ? null : activeProviderId;

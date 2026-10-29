@@ -72,6 +72,11 @@ export interface ProviderAccountSummary {
     /** False for a provider with no account at all (a Folium mod source): it is used without signing in. Absent means true. */
     requiresAccount?: boolean;
     status: 'unknown' | 'authenticated' | 'anonymous' | 'error';
+    /**
+     * 这次是「游客」而不是真账号：`user` 仍带着一个稳定的游客 id（首页推荐、公开歌单要拿它当归属，
+     * 否则没有 userId 就连公开数据也不读），但界面必须按「未登录」显示，登录入口照常给。
+     */
+    guest?: boolean;
     user: ProviderUser | null;
     collections: ProviderCollection[];
     error?: string;

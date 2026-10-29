@@ -84,6 +84,8 @@ const PlayerLayoutProbe: React.FC = () => {
                     slotPrimary="loop" slotSecondary="lyrics-timeline" slotContext={{
                         onShuffle: noop, canShuffle: true, onLike: noop, isLiked: false, likeDisabled: false,
                         invokeCommandById: noop, canInvokeCommandById: () => true,
+                        onDownload: () => {},
+                        canDownload: false,
                     }} onCommitBottomBarOffset={noop} />
                 <NowPlayingToast song={{ title: 'Native song card', artist: 'Probe', coverUrl: null }}
                     trackKey="probe" mode="always" isDaylight={false} onActivate={() => setCardHits(v => v + 1)}

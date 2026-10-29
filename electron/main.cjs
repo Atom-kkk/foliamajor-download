@@ -4470,6 +4470,10 @@ const { createNetworkRecorder } = require('./networkRecorder.cjs');
 const { createNeteaseBackend } = require('./netease/neteaseBackend.cjs');
 const { createQqBackend } = require('./qq/qqBackend.cjs');
 const { registerLoginBackendIpc } = require('./loginBackendIpc.cjs');
+const { registerKuwoIpc } = require('./kuwo/kuwoIpc.cjs');
+const { registerXinghaiIpc } = require('./xinghai/xinghaiIpc.cjs');
+const { registerAudioDownloadIpc } = require('./downloads/audioDownload.cjs');
+const { registerAudioSizeProbeIpc } = require('./audioSizeProbe.cjs');
 
 // 主线程里内嵌后端的出站连接记录：要在它们发出请求之前开始订阅。工作线程里发出的请求另有一份记录（见 networkRecorder.cjs）。
 const networkRecorder = createNetworkRecorder();
@@ -5561,7 +5565,37 @@ async function setMainWindowTransparentModeFromRemote(enabled) {
   return setMainWindowTransparentMode(enabled, handoff);
 }
 
+
+/**
+ * 一次性清掉旧的音频缓存。
+ *
+ * 早期版本可能把「兜底换源换错的版本」（例如伴奏）当成整首存了下来；而播放一旦命中缓存就
+ * 不再取址，于是版本排除、片段判定全都被绕过——表现就是怎么改都在放错的那一份。
+ * 用标记文件保证只清一次，之后正常按 LRU 回收。
+ */
+function resetLegacyAudioCacheOnce() {
+  const directory = getAudioCacheDirectory();
+  const marker = path.join(directory, '.cache-reset-v2');
+  try {
+    if (fs.existsSync(marker)) return;
+    fs.mkdirSync(directory, { recursive: true });
+    let removed = 0;
+    for (const entry of fs.readdirSync(directory)) {
+      if (!entry.endsWith('.bin') && !entry.endsWith('.json')) continue;
+      try {
+        fs.rmSync(path.join(directory, entry), { force: true });
+        removed += 1;
+      } catch {}
+    }
+    fs.writeFileSync(marker, new Date().toISOString());
+    console.log('[AudioCache] cleared legacy audio cache once:', removed, 'files');
+  } catch (error) {
+    console.warn('[AudioCache] one-time cache reset failed', error);
+  }
+}
+
 app.whenReady().then(async () => {
+  resetLegacyAudioCacheOnce();
   applyTileMemoryBudget(app, screen);
   const startupResult = await mainProcessStartupPromise;
   if (startupResult === 'duplicate') {
@@ -6467,6 +6501,37 @@ registerLoginBackendIpc({
   getDefaultSession: () => session.defaultSession,
   neteaseBackend,
   qqBackend,
+});
+
+// 酷我官方接口的窄代理（electron/kuwo/kuwoIpc.cjs）：搜索端点不返回 CORS 头，渲染层的 fetch
+// 到不了；三条通道各自拼固定端点，渲染层只能传参数，不是通用转发。
+registerKuwoIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
+});
+
+// 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认 X-Token / X-Client，OPTIONS 预检回 405，
+// 渲染层带自定义头的请求会被浏览器层拦掉。一条通道，只收参数。
+registerXinghaiIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
+});
+
+// 下载：把播放器拿到的音频地址存到用户选的位置（electron/downloads/audioDownload.cjs）。
+registerAudioDownloadIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
+  getWindow: () => mainWindow,
+  app,
+  dialog,
+  // 有缓存就直接复制播放用的那份字节：下载与听到的必然是同一个录音。
+  getCachePaths: getAudioCachePaths,
+});
+
+// 量音频字节数（electron/audioSizeProbe.cjs）：`<audio>` 拿不到时长时的第二道片段判据。
+registerAudioSizeProbeIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
 });
 
 // Both channels reach the embedded KuGou API. `kugou-api-request` forwards the renderer's operation

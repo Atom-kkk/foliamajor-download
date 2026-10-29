@@ -124,6 +124,8 @@ describe('player control slot loop action resolution', () => {
             hasLyrics: true,
             invokeCommandById: () => {},
             canInvokeCommandById: () => true,
+            onDownload: () => {},
+            canDownload: false,
         });
         expect(slot.labelKey).toBe(expectedKey);
     });

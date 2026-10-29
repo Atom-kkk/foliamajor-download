@@ -95,3 +95,6 @@ __pycache__/
 
 # Built by build/buildPythonRuntime.mjs - binary artifacts that live on the mirrors, not in git.
 dist-runtime/
+
+# Local staging of downloaded binaries (ffmpeg tarball, model weights): fetched by scripts, never committed.
+.assets/

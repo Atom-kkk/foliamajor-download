@@ -29,6 +29,8 @@ type OnlineHomeFeedsAttachment = {
     userId: MediaId | null | undefined;
     canUseAlbums: boolean;
     canUseRadio: boolean;
+    /** 游客的歌单页展示公开推荐，和电台页是同一份数据，所以也要把它读一次。 */
+    publicPlaylists?: boolean;
 };
 
 /**
@@ -37,12 +39,12 @@ type OnlineHomeFeedsAttachment = {
  */
 export const attachOnlineHomeFeeds = (
     resources: Pick<LibraryHomeResources, 'favoriteAlbums' | 'radioFeed'>,
-    { tab, providerId, userId, canUseAlbums, canUseRadio }: OnlineHomeFeedsAttachment,
+    { tab, providerId, userId, canUseAlbums, canUseRadio, publicPlaylists = false }: OnlineHomeFeedsAttachment,
 ): void => {
     resources.favoriteAlbums.setOwner(ownerOf(providerId, userId, canUseAlbums));
     resources.radioFeed.setOwner(ownerOf(providerId, userId, canUseRadio));
     if (tab === 'albums') void resources.favoriteAlbums.ensure();
-    if (tab === 'radio') void resources.radioFeed.ensure();
+    if (tab === 'radio' || (tab === 'playlist' && publicPlaylists)) void resources.radioFeed.ensure();
 };
 
 export const useLibraryHomeOnlineFeeds = ({
@@ -52,19 +54,25 @@ export const useLibraryHomeOnlineFeeds = ({
     userId,
     canUseAlbums,
     canUseRadio,
+    publicPlaylists = false,
 }: {
     resources: Pick<LibraryHomeResources, 'favoriteAlbums' | 'radioFeed'>;
     tab: HomeViewTab;
     providerId: string;
-    /** 当前 provider 的已登录账户（没有账户时为 null：两份数据都没有归属）。 */
+    /** 当前 provider 的账户（游客时是稳定的游客 id：公开推荐要拿它当归属）。 */
     userId: MediaId | null | undefined;
     canUseAlbums: boolean;
     canUseRadio: boolean;
+    /** 游客：歌单页改展示公开推荐。 */
+    publicPlaylists?: boolean;
 }) => {
     const { favoriteAlbums, radioFeed } = resources;
     useEffect(() => {
-        attachOnlineHomeFeeds({ favoriteAlbums, radioFeed }, { tab, providerId, userId, canUseAlbums, canUseRadio });
-    }, [canUseAlbums, canUseRadio, favoriteAlbums, providerId, radioFeed, tab, userId]);
+        attachOnlineHomeFeeds(
+            { favoriteAlbums, radioFeed },
+            { tab, providerId, userId, canUseAlbums, canUseRadio, publicPlaylists },
+        );
+    }, [canUseAlbums, canUseRadio, favoriteAlbums, providerId, publicPlaylists, radioFeed, tab, userId]);
 
     return {
         favoriteAlbums: useLibraryHomeFeed(favoriteAlbums),

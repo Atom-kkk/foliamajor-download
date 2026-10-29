@@ -58,6 +58,9 @@ export default function LatticePlaybackProvider({ actions, currentSong, queue, l
             onToggleTimeline: () => setTimelineOpen(value => !value),
             invokeCommandById: actions.invokeCommandById,
             canInvokeCommandById: actions.canInvokeCommandById,
+            // 网格墙面与主界面共用同一条下载命令，判断也走它的 isAvailable。
+            onDownload: () => actions.invokeCommandById('download-current-song'),
+            canDownload: actions.canInvokeCommandById('download-current-song'),
         };
     }, [actions, currentSong, lyrics, queue]);
     return <PlaybackContext.Provider value={context}>

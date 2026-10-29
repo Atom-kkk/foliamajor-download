@@ -112,6 +112,7 @@ function LatticeProbe({ covers = 'off', queueLength = 12, withLyrics = false }:
                     onShuffle: () => {}, canShuffle: true,
                     onLike: () => {}, isLiked: false, likeDisabled: false,
                     invokeCommandById: setCommand, canInvokeCommandById: () => true,
+                    onDownload: () => {}, canDownload: false,
                 },
                 onCommitBottomBarOffset: () => {},
             } : null,

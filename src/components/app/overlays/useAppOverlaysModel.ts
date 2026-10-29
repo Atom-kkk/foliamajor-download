@@ -67,6 +67,9 @@ export const useAppOverlaysModel = (deps: AppOverlaysDeps): AppOverlaysModel => 
         ).disabled,
         invokeCommandById: deps.invokeCommandById,
         canInvokeCommandById: deps.canInvokeCommandById,
+        // 下载复用命令面板那条命令：它已经处理了「只给试听」的提示与取址顺序。
+        onDownload: () => deps.invokeCommandById('download-current-song'),
+        canDownload: deps.canInvokeCommandById('download-current-song'),
     }), [
         activePlaybackContext,
         deps.canInvokeCommandById,

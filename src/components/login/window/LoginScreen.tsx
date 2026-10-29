@@ -131,14 +131,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             );
         }
     } else if (scene === 'account' && providerId) {
-        const view = accountView(summary ? rowStatus(summary) : null, Boolean(summary?.user));
-        headline = summary?.user?.nickname ?? label;
+        // 游客的 user 只用来给公开推荐做归属，不是「已登录的账号」：这一幅要显示成未登录，
+        // 否则会把「游客 / ID: guest」当成一个真账号，还给出退出按钮。
+        const signedInUser = summary?.user && !summary.guest ? summary.user : null;
+        const view = accountView(summary ? rowStatus(summary) : null, Boolean(signedInUser));
+        headline = signedInUser?.nickname ?? label;
         if (view === 'gone') {
             // 这一幅开着的时候登录没有了：说一句，留一个重新登录（再选一次这一行）。
             if (summary && rowStatus(summary) === 'ran-out') note = t('status.loginExpired');
             if (summary) actions = [{ label: t('home.loginBrowserRetry'), primary: true, onClick: () => onChoose(providerId) }];
         } else {
-            if (summary?.user) note = `${label} · ID: ${String(summary.user.id)}`;
+            if (signedInUser) note = `${label} · ID: ${String(signedInUser.id)}`;
             actions = [...switchAction, { label: t('account.logout'), onClick: onSignOut }];
         }
     } else if (scene === 'accountless') {

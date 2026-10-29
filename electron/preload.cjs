@@ -76,6 +76,19 @@ contextBridge.exposeInMainWorld('electron', {
     },
     platform: process.platform,
     isLinuxX11: process.platform === 'linux' && !process.env.WAYLAND_DISPLAY,
+    // 酷我官方接口的窄代理（electron/kuwo/kuwoIpc.cjs）：搜索端点没有 CORS 头，渲染层的 fetch 到不了。
+    // 只收参数，URL 由主进程拼死，所以这三个方法不是通用转发。
+    kuwoSearch: (query) => ipcRenderer.invoke('kuwo-search', query),
+    kuwoAudioUrl: (query) => ipcRenderer.invoke('kuwo-url', query),
+    kuwoLyric: (query) => ipcRenderer.invoke('kuwo-lyric', query),
+    // 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认两个自定义头，预检不通，只能从主进程走。
+    xinghaiAudioUrl: (query) => ipcRenderer.invoke('xinghai-url', query),
+    // 下载：主进程弹保存框、流式写盘，页面只交地址与建议文件名。
+    downloadAudio: (payload) => ipcRenderer.invoke('download-audio', payload),
+    // 下载已缓存的那一首：直接复制播放器用的文件，`fromCache: false` 表示没缓存、请回落到地址下载。
+    downloadCachedAudio: (payload) => ipcRenderer.invoke('download-cached-audio', payload),
+    // 量一条音频地址的字节数（electron/audioSizeProbe.cjs）：拿不到时长时判断是不是片段。
+    probeAudioSize: (url) => ipcRenderer.invoke('probe-audio-size', url),
     getSettings: () => ipcRenderer.invoke('get-settings'),
     saveSettings: (key, value) => ipcRenderer.invoke('save-settings', key, value),
     onWallpaperModeChanged: (callback) => {

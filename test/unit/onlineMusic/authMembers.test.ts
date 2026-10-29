@@ -39,7 +39,10 @@ describe('the sign-in members of each built-in platform', () => {
         expect(Object.keys(getOnlineMusicProvider(providerId)!.auth!).sort()).toEqual(members);
     });
 
-    it('has a row for every built-in platform', () => {
-        expect(listOnlineMusicProviders().map(provider => provider.id).sort()).toEqual(Object.keys(AUTH_MEMBERS).sort());
+    it('has a row for every built-in platform that has a sign-in', () => {
+        // `custom`（自定义/第三方音源）没有账号，故不在表里：它只有 search / playback / lyrics。
+        expect(listOnlineMusicProviders().map(provider => provider.id).filter(id => getOnlineMusicProvider(id)?.auth).sort())
+            .toEqual(Object.keys(AUTH_MEMBERS).sort());
+        expect(getOnlineMusicProvider('custom')?.auth).toBeUndefined();
     });
 });

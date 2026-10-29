@@ -752,6 +752,44 @@ declare global {
         /** Resolves the OS path of a dropped File (File.path was removed in modern Electron). */
         getPathForFile: (file: File) => string;
       };
+      /**
+       * 酷我官方接口的窄代理（electron/kuwo/kuwoIpc.cjs）。搜索端点不返回 CORS 头，渲染层只能
+       * 从这里请求；三条都只收参数，URL 由主进程拼死。
+       */
+      kuwoSearch?: (query: { keyword: string; limit?: number; offset?: number }) => Promise<{ status: number; text: string }>;
+      kuwoAudioUrl?: (query: { rid: string; quality?: string }) => Promise<{ status: number; text: string }>;
+      kuwoLyric?: (query: { rid: string }) => Promise<{ status: number; text: string }>;
+      /** 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：一个 GET 换一个地址，参数由渲染层给。 */
+      xinghaiAudioUrl?: (query: {
+        source: 'wy' | 'tx' | 'kg' | 'mg' | 'qs';
+        songmid?: string;
+        hash?: string;
+        albumId?: string;
+        name?: string;
+        singer?: string;
+        interval?: string;
+        albumName?: string;
+        quality?: string;
+      }) => Promise<{ status: number; text: string }>;
+      /**
+       * 下载一条音频到用户选的位置（electron/downloads/audioDownload.cjs）。主进程弹保存框并流式写盘；
+       * 页面给不了路径，只给地址与建议文件名。
+       */
+      downloadAudio?: (payload: {
+        url: string;
+        defaultName: string;
+        extension: string;
+      }) => Promise<{ canceled: boolean; filePath: string | null; bytes: number }>;
+      /**
+       * 下载已缓存的那一首：主进程直接复制播放器用的那个文件（同一次录音，不会串版本）。
+       * `fromCache: false` 表示这首没缓存，调用方回落到按地址下载。
+       */
+      downloadCachedAudio?: (payload: {
+        cacheKey: string;
+        defaultName: string;
+      }) => Promise<{ canceled: boolean; fromCache: boolean; filePath: string | null; bytes: number }>;
+      /** 量一条音频地址的字节数（electron/audioSizeProbe.cjs）。拿不到时为 null。 */
+      probeAudioSize?: (url: string) => Promise<number | null>;
       /** Beat This! on the CPU in the analysis worker - automix's fallback only. Null when the weights are absent. */
       runBeatThis?: (
         chunks: Array<{ data: Float32Array; frames: number }>,

@@ -126,6 +126,8 @@ const PlayerBottomBarProbe: React.FC = () => {
                     likeDisabled: false,
                     invokeCommandById: (id: string) => setSlotHits(hits => [...hits, `cmd:${id}`]),
                     canInvokeCommandById: () => commandsInvocable,
+                    onDownload: () => {},
+                    canDownload: false,
                 }}
                 onCommitBottomBarOffset={setCommittedOffset}
             />

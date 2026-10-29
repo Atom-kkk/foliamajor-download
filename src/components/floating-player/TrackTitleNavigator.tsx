@@ -62,10 +62,12 @@ const TrackTitleNavigator: React.FC<TrackTitleNavigatorProps> = ({
     const isPreview = previewTitle !== null;
     const zoneClass = 'absolute inset-y-0 flex items-center';
     const arrowClass = [
-        'pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full',
-        'transition-opacity duration-200 hover:opacity-100!',
-        alwaysShowArrows ? 'opacity-70' : 'opacity-0 group-hover/title:opacity-70',
-        isDaylight ? 'hover:bg-black/10' : 'hover:bg-white/15',
+        'pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full',
+        'transition-colors duration-150',
+        alwaysShowArrows ? 'opacity-90' : 'opacity-0 group-hover/title:opacity-90',
+        alwaysShowArrows
+            ? (isDaylight ? 'bg-black/5 hover:bg-black/15' : 'bg-white/10 hover:bg-white/25')
+            : (isDaylight ? 'hover:bg-black/10' : 'hover:bg-white/15'),
     ].join(' ');
     const textClass = 'w-full truncate text-center text-sm font-bold';
 
@@ -92,7 +94,7 @@ const TrackTitleNavigator: React.FC<TrackTitleNavigatorProps> = ({
                     (side === 'prev' ? onPrev : onNext)();
                 }}
             >
-                <Icon size={16} strokeWidth={2.4} />
+                <Icon size={18} strokeWidth={2.4} />
             </button>
         );
     };

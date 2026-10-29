@@ -63,7 +63,9 @@ export const BravaisHomeOnline: React.FC<BravaisHomeSourceCommonProps & {
     account: LibraryAccountController;
 }> = ({ tab, online, list, account: accountController, homeActions, onOpenGridView, ...common }) => {
     const { t } = useTranslation();
-    const showList = online.accountView === 'authenticated';
+    // 未登录也显示列表：游客的「歌单」是公开推荐，「电台」是公开的 FM / 每日推荐 / 推荐歌单，
+    // 探索页是平台自己的公开推荐页。只有「解析中 / 无账户的平台」才没有列表。
+    const showList = online.accountView !== 'resolving' && online.accountView !== 'accountless';
     useLibraryHomeListRegistration({
         enabled: showList,
         getState: (): LibraryHomeListState => ({
@@ -79,11 +81,11 @@ export const BravaisHomeOnline: React.FC<BravaisHomeSourceCommonProps & {
         setSection: () => false,
         runAction: () => false,
     });
-    // 未登录 / 无账户 / 解析中：墙空着，缝里说原因（平台切换与登录在 B10 的账户位里）。
+    // 未登录 / 无账户 / 解析中：缝里说原因（平台切换与登录在 B10 的账户位里）。
     // fb3（用户实测）：未登录时不再显示「先搜几首喜欢的歌试试看」（grid / TUI 仍用 home.guestTitle），缝里只有
-    // 「连接在线平台」入口；登录过期仍要说。
+    // 「连接在线平台」入口；登录过期仍要说。游客现在有公开推荐可看，空列表走 list.emptyMessage（通常是「加载中」）。
     const emptyMessage = online.accountView === 'guest'
-        ? (online.needsRelogin ? t('status.loginExpired') : undefined)
+        ? (online.needsRelogin ? t('status.loginExpired') : list.emptyMessage)
         : online.accountView === 'resolving' ? t('home.loadingLibrary') : list.emptyMessage;
     // B10：账户位里的平台切换（account-select / account-logout）。
     const account = useBravaisHomeAccount(accountController, online);

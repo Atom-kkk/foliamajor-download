@@ -5,9 +5,13 @@ import { getPlaybackSourceRef } from '../../utils/appPlaybackGuards';
 import { neteaseProvider } from './netease/neteaseProvider';
 import { kugouProvider } from './kugou/kugouProvider';
 import { qqProvider } from './qq/qqProvider';
+import { kuwoProvider } from './kuwo/kuwoProvider';
 import { bodianProvider } from './bodian/bodianProvider';
 import { ytmProvider } from './ytm/ytmProvider';
 import { spotifyProvider } from './spotify/spotifyProvider';
+import { customProvider } from './custom/customProvider';
+import { xinghaiProvider } from './xinghai/xinghaiProvider';
+import { withGuestAccess } from './guest/guestAccess';
 
 // src/services/onlineMusic/providerRegistry.ts
 
@@ -104,9 +108,22 @@ export const requireOnlineMusicProviderForSong = (song: SongResult): OnlineMusic
     return requireOnlineMusicProvider(sourceRef.providerId);
 };
 
-registerOnlineMusicProvider(neteaseProvider);
-registerOnlineMusicProvider(kugouProvider);
-registerOnlineMusicProvider(qqProvider);
-registerOnlineMusicProvider(bodianProvider);
-registerOnlineMusicProvider(ytmProvider);
-registerOnlineMusicProvider(spotifyProvider);
+// 内置平台：统一套一层游客身份（guest/guestAccess.ts），未登录时 getLoginStatus 回一个稳定的游客账号，
+// 账号层因此始终有一个 userId，游客的歌单/喜欢清单直接答空。
+// 只包内置平台，不改 `registerOnlineMusicProvider` 本身：账号层「没人登录 -> 账号离开」的语义对
+// 其它 provider（mod 源、测试里的假 adapter）仍然是原来的合同，这里只是产品层的决定。
+const registerBuiltIn = (provider: OnlineMusicProvider): void => registerOnlineMusicProvider(withGuestAccess(provider));
+
+registerBuiltIn(neteaseProvider);
+registerBuiltIn(kugouProvider);
+registerBuiltIn(qqProvider);
+registerBuiltIn(kuwoProvider);
+registerBuiltIn(bodianProvider);
+registerBuiltIn(ytmProvider);
+registerBuiltIn(spotifyProvider);
+// 自定义（第三方）音源：没有账号（auth: false），不需要游客身份。sourceRef.providerId 就是 `custom`，
+// 缓存键 online:custom:<id> 与别的源分开；没配地址时 getAvailability() 报 not-configured，不影响内置源。
+registerOnlineMusicProvider(customProvider);
+// 星海音源：没有搜索能力，只按原平台 id 换地址，作为内置源放出不来时的兜底（见 routing/lockedSongRouting.ts）。
+// 与 kuwo 不重复：它接的是两个 mediaId 能直接换址的平台，酷我由上面的直连源负责。
+registerOnlineMusicProvider(xinghaiProvider);
