@@ -178,10 +178,10 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${name}-${version}-mac-${arch}.${ext}"
     },
     "win": {
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "${name}-Setup-${version}.${ext}",
       "target": [
         "nsis"
       ],

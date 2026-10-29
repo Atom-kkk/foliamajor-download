@@ -1,0 +1,167 @@
+name: Build installers
+
+# 打出 Windows 与 macOS 的安装包并挂到 GitHub Release。
+#
+# 触发方式两种，都不需要额外的 secrets：
+#   1. 推一个 v* 标签（`git push origin v0.8.0`）—— 版本号取自 package.json；
+#   2. 在 Actions 页面手动 Run workflow。
+#
+# 为什么放在 CI 而不是本机：Windows 的 NSIS 安装包在 macOS 上要靠 Wine 交叉编译，而 CI 的
+# windows-latest 是原生环境；release 的上传用 workflow 自带的 GITHUB_TOKEN 就够了（contents: write）。
+#
+# 二进制资源都在打包前钩子里准备，不需要在 workflow 里单独摆：
+#   build/beforePack.cjs -> ffmpeg（packaging/ffmpeg/fetch-ffmpeg.mjs）、MNN 运行时
+#   （build/buildMnnRuntime.mjs，cmake + 平台编译器由 hosted image 提供）、模型权重
+#   （build/fetchModels.mjs）、macOS 的 koffi 预编译（packaging/macos/prepare-koffi.mjs）。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-installers-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: installers-windows
+          - os: macos-latest
+            artifact: installers-macos
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Windows 壁纸模式要一个 Rust 写的 helper（WorkerW 附着 + 原始输入转发），
+      # 它是 win.extraResources 里的一项，缺了打包会报错。
+      - name: Install Rust toolchain
+        if: runner.os == 'Windows'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache wallpaper-helper Cargo build
+        if: runner.os == 'Windows'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packaging/windows/wallpaper-helper
+
+      - name: Build wallpaper helper (Windows only)
+        if: runner.os == 'Windows'
+        run: node packaging/windows/build-wallpaper-helper.mjs
+
+      - name: Build web app for Electron
+        env:
+          ELECTRON: 'true'
+        run: npm run build
+
+      # MNN 是几分钟的编译，缓存键覆盖构建读到的所有输入。
+      - name: Cache MNN runtime build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/.mnn-src
+            build/mnn
+          key: mnn-${{ runner.os }}-${{ hashFiles('build/buildMnnRuntime.mjs', 'native/folia-mnn/**') }}
+
+      # 不做签名：macOS 上没有证书，CSC_IDENTITY_AUTO_DISCOVERY=false 让它跳过签名而不是卡住。
+      - name: Package Electron app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --publish never
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+            release/latest*.yml
+            release/*.deb
+            release/*.rpm
+            release/*.tar.gz
+            !release/builder-debug.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Attach installers to the release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+          merge-multiple: true
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la installers
+          # 只有安装包与更新用的 latest*.yml；没有产物就失败，不发空 release。
+          mapfile -d '' files < <(find installers -type f -print0)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "没有可上传的产物" >&2
+            exit 1
+          fi
+
+          NOTES=$(cat <<'EOF'
+          本分支相对上游的改动见 [docs/fork-changes.md](docs/fork-changes.md)。
+
+          **安装包未签名**：
+          - macOS：首次打开请右键 → 打开，或到「系统设置 → 隐私与安全性」里允许。详见
+            [macOS 提示「已损坏」怎么办](docs/desktop/macos-app-damaged.md)。
+          - Windows：SmartScreen 可能提示「未知发布者」，选择「更多信息 → 仍要运行」。
+          EOF
+          )
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Folia Download $TAG" \
+              --notes "$NOTES" \
+              --target "$GITHUB_SHA"
+          fi
