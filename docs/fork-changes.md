@@ -463,17 +463,32 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 
 ## 11. 开源 / 打包发布前必须修改的地方
 
-本分支沿用了上游的包信息，公开分发前请改掉，否则会与官方安装包冲突、或把更新指到上游：
+本分支的包信息已经改掉一部分（仓库名 `foliamajor-download`），下面这些仍需在公开分发前确认：
 
 | 文件 | 字段 | 现值 | 为什么要改 |
 | --- | --- | --- | --- |
-| `package.json` | `build.appId` | `top.izuna.foliamajor` | 与官方安装包同 appId，会互相覆盖/冲突 |
-| `package.json` | `build.productName` / `name` | `Folia` / `folia-major` | 与官方同名，用户分不清装的是哪个 |
-| `package.json` | `build.publish[0].owner/repo` | `chthollyphile/folia-major` | 自动更新会去拉上游的版本 |
-| `package.json` | `version` | `0.7.21` | 与上游同版本号，无法区分 |
-| `README.md` | 徽章、下载、社群链接 | 指向上游 | 本分支的发版与社群地址不同 |
-| `.github/workflows/` | 发布类工作流 | 上游 CI（`electron-release`、`*-pre-release`、`docker-*-publish`、`triage-*`） | 它们在 fork 里缺 secrets 会直接失败；要么删掉，要么改到本仓库的环境与 secrets，否则每次推送都会红一片 |
+| `package.json` | `build.appId` | `top.izuna.foliamajor`（上游值，**未改**） | 与官方安装包同 appId，两个包会互相覆盖/冲突。建议改成 `io.github.<github-owner>.foliamajordownload` 这类只属于自己的 id |
+| `package.json` | `build.productName` | `Folia`（上游值，**未改**） | 安装后在系统里与官方同名，用户分不清装的是哪个 |
+| `package.json` | `author` | `chthollyphile`（上游值，**未改**） | 会写进安装包元数据；本分支应署自己的名字，上游归属由 `NOTICE` 与 `CONTRIBUTORS.md` 保留 |
+| `package.json` / `README*` | `repository`、`build.publish[0].owner` | `<github-owner>` 占位 | 填你的 GitHub 用户名；`publish.repo` 已设为 `foliamajor-download` |
+| `package.json` | `version` | `0.7.21` | 与上游同版本号，无法区分；发首个包前改成自己的版本 |
+| `package.json` | `desktopName` / `build.linux.executableName` | `folia-major*` | 与 `packaging/linux/folia-major.desktop` 文件名绑定，改名要连文件一起改（不改也能用） |
+| `.github/workflows/` | 发布类与 triage 工作流 | 上游 CI | fork 里缺 secrets 会一直跑红，见下方说明 |
 | `NOTICE` | 维护者与年份 | `<维护者>` 占位 | 填写本分支的著作权人 |
+
+### CI 工作流的处理建议
+
+`.github/workflows/` 里有 14 个上游工作流，按需要分成三类：
+
+| 类别 | 文件 | 在 fork 里的表现 |
+| --- | --- | --- |
+| PR 校验（**建议保留**） | `pr-unit-tests.yml`、`docker-stack-check.yml`、`linux-arm64-package-check.yml` | 不需要发布凭据，正常可用 |
+| 发布（**建议删或改**） | `electron-release.yml`、`canary-pre-release.yml`、`nightly-pre-release.yml`、`release-candidate.yml`、`docker-stack-publish.yml`、`sync-server-docker-publish.yml` | 缺 `GH_TOKEN`、镜像仓库凭据、AUR 密钥等，步骤直接报错；`nightly` 还每天定时跑一次 |
+| 机器人（**按需**） | `triage-issues.yml`、`triage-pr.yml`、`triage-stale.yml`、`codemap-sync.yml` | triage 需要 `DEEPSEEK_API_KEY`；`codemap-sync` 会往 main 提交生成物 |
+
+这些工作流与应用的运行无关（本地 `npm run dev` / `build:electron` 完全不看 `.github`），
+它们只影响仓库页面的自动化。真正会影响已安装应用的是 `build.publish`：见上一张表。
+
 
 许可证**不能**改：上游是 AGPL-3.0，本分支是衍生作品，必须继续以 AGPL-3.0 分发并保留
 [LICENSE](../LICENSE) 原文与 [NOTICE](../NOTICE) 中的归属声明。

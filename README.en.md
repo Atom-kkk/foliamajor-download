@@ -23,7 +23,7 @@ permission-locked songs, downloads, and guest mode**.
 </div>
 
 > [!IMPORTANT]
-> **Unofficial fork.** Upstream is [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major).
+> **Unofficial fork** (repository: `foliamajor-download`). Upstream is [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major).
 > This repository is not affiliated with, nor endorsed by, the upstream author. Upstream releases,
 > mirrors, Discord, AUR and Flatpak packages do not belong to this branch and do not contain the changes
 > described here.

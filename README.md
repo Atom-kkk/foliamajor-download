@@ -25,7 +25,7 @@ Lyrics Reimagined // 辞曲新境
 </div>
 
 > [!IMPORTANT]
-> **这是非官方分支。** 上游是 [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major)，
+> **这是非官方分支**（仓库名 `foliamajor-download`）。上游是 [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major)，
 > 本仓库与上游作者无关，也未获其背书。上游的 Release、网盘、Discord、AUR、Flatpak 都不属于本分支，
 > 那些渠道的安装包也不包含本文档描述的改动。
 >
@@ -142,6 +142,8 @@ GET {base}/lyric?id=<id>      # 可选 -> { "lrc": "...", "translated": "..." }
 需要 Node.js ≥ 24。
 
 ```bash
+git clone https://github.com/<github-owner>/foliamajor-download.git
+cd foliamajor-download
 npm install
 npm run dev            # Web 版（Vite）
 npm run dev:electron   # 桌面版（Electron + 热更新）

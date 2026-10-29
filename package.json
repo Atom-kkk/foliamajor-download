@@ -1,11 +1,15 @@
 {
-  "name": "folia-major",
+  "name": "foliamajor-download",
   "productName": "Folia",
   "desktopName": "folia-major.desktop",
   "description": "Lyrics Reimagine",
   "author": {
     "name": "chthollyphile",
     "email": "chthollyphile@users.noreply.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<github-owner>/foliamajor-download.git"
   },
   "private": true,
   "version": "0.7.21",
@@ -79,8 +83,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "chthollyphile",
-        "repo": "folia-major"
+        "owner": "<github-owner>",
+        "repo": "foliamajor-download"
       }
     ],
     "files": [
