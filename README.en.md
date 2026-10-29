@@ -35,7 +35,7 @@ permission-locked songs, downloads, and guest mode**.
 
 | # | Capability | In one line |
 | --- | --- | --- |
-| 1 | **Kuwo source** | A fifth searchable built-in source, no sign-in, desktop only |
+| 1 | **Kuwo source** | A fourth searchable built-in source, no sign-in, desktop only |
 | 2 | **Xinghai source** | No search; swaps an address by the original platform id, used as a fallback |
 | 3 | **Custom source** | Plug any HTTP service outside the repo in as a provider; testable from settings |
 | 4 | **Fallback for locked songs** | When a built-in source provably cannot serve the full track, another source provides that one address |

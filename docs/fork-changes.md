@@ -35,7 +35,7 @@ electron/downloads/  electron/audioSizeProbe.cjs   下载与片段字节探测
 
 ---
 
-## 1. 在线音源：从 6 个变成 8 个
+## 1. 在线音源：从 6 个变成 9 个
 
 上游注册 `netease`、`kugou`、`qq`、`bodian`、`ytm`、`spotify`。本分支追加三个：
 
@@ -472,6 +472,7 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 | `package.json` | `build.publish[0].owner/repo` | `chthollyphile/folia-major` | 自动更新会去拉上游的版本 |
 | `package.json` | `version` | `0.7.21` | 与上游同版本号，无法区分 |
 | `README.md` | 徽章、下载、社群链接 | 指向上游 | 本分支的发版与社群地址不同 |
+| `.github/workflows/` | 发布类工作流 | 上游 CI（`electron-release`、`*-pre-release`、`docker-*-publish`、`triage-*`） | 它们在 fork 里缺 secrets 会直接失败；要么删掉，要么改到本仓库的环境与 secrets，否则每次推送都会红一片 |
 | `NOTICE` | 维护者与年份 | `<维护者>` 占位 | 填写本分支的著作权人 |
 
 许可证**不能**改：上游是 AGPL-3.0，本分支是衍生作品，必须继续以 AGPL-3.0 分发并保留
