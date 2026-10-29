@@ -142,7 +142,7 @@ GET {base}/lyric?id=<id>      # 可选 -> { "lrc": "...", "translated": "..." }
 需要 Node.js ≥ 24。
 
 ```bash
-git clone https://github.com/<github-owner>/foliamajor-download.git
+git clone https://github.com/Atom-kkk/foliamajor-download.git
 cd foliamajor-download
 npm install
 npm run dev            # Web 版（Vite）

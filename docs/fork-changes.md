@@ -463,8 +463,8 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 
 ## 11. 开源 / 打包发布前必须修改的地方
 
-上游的包信息指向 `chthollyphile/folia-major`、`top.izuna.foliamajor`。本分支已经把这些身份信息改成自己的，
-下面列出「已改」「还要你填」「刻意没改」三张清单。
+上游的包信息指向 `chthollyphile/folia-major`、`top.izuna.foliamajor`。本分支已经把这些身份信息全部改成自己的，
+下面列出「已改」与「刻意没改」，以及还没做的最后一步。
 
 **已改好**（不需要再动）：
 
@@ -475,18 +475,27 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 | `package.json` `build.appId` | `com.foliamajordownload.folia` | 不再与官方安装包同 id，两个包可以共存 |
 | `electron/main.cjs` `WINDOWS_APP_USER_MODEL_ID` | `com.foliamajordownload.folia` | 与 appId 一致，任务栏分组与通知归属跟着走 |
 | `package.json` `version` | `0.8.0` | 高于上游 0.7.21，更新比较不会误判 |
-| `package.json` `repository`、`build.publish` | `<github-owner>` / `foliamajor-download` | 打包出的 `app-update.yml` 指向自己，不会去拉上游版本 |
-| `electron/main.cjs` `FOLIA_RELEASES_URL`、`FOLIA_GITHUB_REPOSITORY` | `<github-owner>` / `foliamajor-download` | 应用内「查看 Release」「检查更新」不再跳到上游 |
+| `package.json` `repository`、`build.publish` | `Atom-kkk/foliamajor-download` | 打包出的 `app-update.yml` 指向自己，不会去拉上游版本 |
+| `electron/main.cjs` `FOLIA_RELEASES_URL`、`FOLIA_GITHUB_REPOSITORY` | `Atom-kkk/foliamajor-download` | 应用内「查看 Release」「检查更新」不再跳到上游 |
+| `package.json` `author` | `Atom-kkk` + GitHub noreply 邮箱 | 安装包元数据署本分支；deb / rpm 要的 maintainer 邮箱也有了 |
 | `packaging/linux/folia-major.desktop` `Name` | `Folia Download` | 应用菜单里显示的名字 |
 | `.github/workflows/` | 只剩 4 个不需要发布凭据的工作流 | 发布类与 triage 已移到 `workflows-disabled/`，不会再跑红 |
 
-**还要你填**：
+**还没做的一步：建仓库并推上去**
 
-| 位置 | 现值 | 说明 |
-| --- | --- | --- |
-| `<github-owner>`：`package.json` 的 `repository` 与 `publish.owner`、`electron/main.cjs` 的两处常量、两个 README 的克隆地址 | 占位 | 你的 GitHub 用户名。`grep -rn "<github-owner>" .` 一次全替换 |
-| `package.json` `author` | `chthollyphile`（上游） | 不改也能跑；换成自己的名字时建议同时填邮箱（deb / rpm 打包要 maintainer），上游归属已由 `NOTICE` 与 `CONTRIBUTORS.md` 保留 |
-| `NOTICE` 的 `<维护者>` | 占位 | 本分支的著作权人 |
+本地仓库已经就绪（提交历史、忽略规则、CI 都整理好了），GitHub 上还没有 `Atom-kkk/foliamajor-download`。
+建仓库只能走网页或 API —— SSH 能推，但推不了一个不存在的仓库：
+
+```bash
+# 1. 在 GitHub 新建空仓库 Atom-kkk/foliamajor-download（不要勾 README / .gitignore / LICENSE，否则首推会冲突）
+# 2. 推上去
+git remote add origin git@github.com:Atom-kkk/foliamajor-download.git
+git push -u origin main
+```
+
+推上去之后 GitHub 只会跑留下的 4 个工作流；`nightly` 与 triage 已停用，不会再出现每天失败的记录。
+要发安装包时，`electron-release` 需要先配好 secrets 再移回 `.github/workflows/`，或者手动在本机
+`npm run build:electron` 后上传（`build.publish` 已指向本仓库，`electron-builder --publish never` 出的包不会自己发）。
 
 **刻意没改**：
 
