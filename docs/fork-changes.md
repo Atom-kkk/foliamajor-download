@@ -473,21 +473,36 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 | `package.json` / `README*` | `repository`、`build.publish[0].owner` | `<github-owner>` 占位 | 填你的 GitHub 用户名；`publish.repo` 已设为 `foliamajor-download` |
 | `package.json` | `version` | `0.7.21` | 与上游同版本号，无法区分；发首个包前改成自己的版本 |
 | `package.json` | `desktopName` / `build.linux.executableName` | `folia-major*` | 与 `packaging/linux/folia-major.desktop` 文件名绑定，改名要连文件一起改（不改也能用） |
-| `.github/workflows/` | 发布类与 triage 工作流 | 上游 CI | fork 里缺 secrets 会一直跑红，见下方说明 |
+| `.github/workflows/` | 发布类与 triage 工作流 | 上游 CI | 部分工作流缺 secrets 会失败（不是每次都跑），见下方分类表 |
 | `NOTICE` | 维护者与年份 | `<维护者>` 占位 | 填写本分支的著作权人 |
 
 ### CI 工作流的处理建议
 
-`.github/workflows/` 里有 14 个上游工作流，按需要分成三类：
+`.github/workflows/` 里有 14 个上游工作流。它们在 fork 里会不会「跑红」，取决于触发条件和所需凭据
+（`GITHUB_TOKEN` 由 GitHub 自动提供，其余 secrets 不会随 fork 复制过来）：
 
-| 类别 | 文件 | 在 fork 里的表现 |
-| --- | --- | --- |
-| PR 校验（**建议保留**） | `pr-unit-tests.yml`、`docker-stack-check.yml`、`linux-arm64-package-check.yml` | 不需要发布凭据，正常可用 |
-| 发布（**建议删或改**） | `electron-release.yml`、`canary-pre-release.yml`、`nightly-pre-release.yml`、`release-candidate.yml`、`docker-stack-publish.yml`、`sync-server-docker-publish.yml` | 缺 `GH_TOKEN`、镜像仓库凭据、AUR 密钥等，步骤直接报错；`nightly` 还每天定时跑一次 |
-| 机器人（**按需**） | `triage-issues.yml`、`triage-pr.yml`、`triage-stale.yml`、`codemap-sync.yml` | triage 需要 `DEEPSEEK_API_KEY`；`codemap-sync` 会往 main 提交生成物 |
+| 文件 | 触发条件 | 在 fork 里的表现 | 缺什么 |
+| --- | --- | --- | --- |
+| `pr-unit-tests.yml` | 有 PR | 正常 | 无 |
+| `docker-stack-check.yml`、`linux-arm64-package-check.yml` | 有 PR | 正常 | 无 |
+| `codemap-sync.yml` | push main（除只改 CODEMAP） | 正常，用自己的 token 提交生成物 | 无 |
+| `triage-pr.yml`、`triage-stale.yml` | PR / 每天 03:00 | 正常（纯确定性逻辑，不调 LLM） | 无 |
+| `triage-issues.yml` | 有 issue | **失败** | `DEEPSEEK_API_KEY` |
+| `electron-release.yml` | `realeco-release` 文件变化 / 手动 | **失败**（先过版本校验，再到发布） | `AUR_SSH_PRIVATE_KEY`、`AUR_REPO_SSH_URL` |
+| `canary-pre-release.yml`、`release-candidate.yml` | 手动 | **失败** | 同上 |
+| `nightly-pre-release.yml` | **每天 02:00 定时** | **每天都失败一次** | 同上 |
+| `docker-stack-publish.yml` | `deploy/docker/VERSION` 变化 / 手动 | **失败** | `DOCKERHUB_USERNAME`、`DOCKERHUB_TOKEN` |
+| `sync-server-docker-publish.yml` | `sync-server/package.json` 变化 / 手动 | **失败** | 同上 |
 
-这些工作流与应用的运行无关（本地 `npm run dev` / `build:electron` 完全不看 `.github`），
-它们只影响仓库页面的自动化。真正会影响已安装应用的是 `build.publish`：见上一张表。
+也就是说：日常真正会持续报错的是 `nightly-pre-release`（每天一次）和 `triage-issues`（有人开 issue 时），
+其余发布类平时不触发，一旦你改动对应的版本文件或手动触发才会失败。
+
+这些工作流与应用的运行**无关**：本地 `npm run dev` / `build:electron` 完全不读 `.github`，
+源码编译出的程序也不会因为 CI 失败而少一行功能。它们只影响仓库页面的自动化与状态灯。
+
+真正会影响已安装应用的是 `build.publish`：它会写进安装包的 `app-update.yml`，
+应用里 `electron/main.cjs` 的 `setupAutoUpdater` 按它查更新 —— 指向上游就会被提示「升级」成官方版本，
+等于把 fork 覆盖掉。本分支已改为 `<github-owner>/foliamajor-download`。
 
 
 许可证**不能**改：上游是 AGPL-3.0，本分支是衍生作品，必须继续以 AGPL-3.0 分发并保留
