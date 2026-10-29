@@ -161,8 +161,9 @@ npm run test:component # 组件测试（Playwright）
 
 模型权重、ffmpeg、MNN 运行库等二进制由脚本拉取，不进仓库：`npm run models:fetch`、`npm run build:ffmpeg`。
 
-**打包发布前请先改掉沿用自上游的包信息**（appId、productName、publish 指向、版本号），
-清单见 [docs/fork-changes.md §11](docs/fork-changes.md#11-开源--打包发布前必须修改的地方)。
+包信息（appId、productName、作者、版本号、`publish` 指向）已改成本分支自己的，不需要再动：
+`npm run build:electron` 直接出安装包到 `release/`，自动更新也会查本仓库的 Release。
+其余发布相关的注意事项见 [docs/fork-changes.md §11](docs/fork-changes.md#11-开源--打包发布前必须修改的地方)。
 
 ## 与上游同步
 

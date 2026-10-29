@@ -125,8 +125,9 @@ npm run build:electron # desktop installers (electron-builder, output in release
 `npm run typecheck`, `npm run test:unit`, `npm run test:component` for checks. Model weights, ffmpeg and
 the MNN runtime are fetched by scripts and never committed.
 
-**Before packaging for distribution, change the package metadata inherited from upstream** (appId,
-productName, publish target, version) — checklist in
+The package metadata (appId, productName, author, version, `publish` target) already belongs to this
+branch: `npm run build:electron` writes installers to `release/`, and the updater looks at this
+repository's releases. Other release notes are in
 [docs/fork-changes.md §11](docs/fork-changes.md#11-开源--打包发布前必须修改的地方).
 
 ## Staying in sync with upstream

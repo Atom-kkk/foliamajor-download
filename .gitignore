@@ -98,3 +98,6 @@ dist-runtime/
 
 # Local staging of downloaded binaries (ffmpeg tarball, model weights): fetched by scripts, never committed.
 .assets/
+
+# Local tooling data (work logs, scratch), never part of the project.
+.workbuddy/
