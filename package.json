@@ -2,7 +2,8 @@
   "name": "foliamajor-download",
   "productName": "Folia Download",
   "desktopName": "folia-major.desktop",
-  "description": "Lyrics Reimagine",
+  "description": "Folia Download — 多音源与下载增强的全屏歌词播放器",
+  "homepage": "https://github.com/Atom-kkk/foliamajor-download#readme",
   "author": {
     "name": "Atom-kkk",
     "email": "Atom-kkk@users.noreply.github.com"
