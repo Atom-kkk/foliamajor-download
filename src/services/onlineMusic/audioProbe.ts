@@ -34,32 +34,45 @@ const cache = new Map<string, { ms: number | null; at: number }>();
 const element = (): HTMLAudioElement | null => {
     if (typeof Audio === 'undefined') return null;
     if (!probeElement) {
-        probeElement = new Audio();
-        probeElement.preload = 'metadata';
-        probeElement.muted = true;
+        // 不是每个环境里的 Audio 都能当媒体元素用（测试里的桩、部分 WebView 的精简实现）：
+        // 没有事件接口就当「量不了」。探测失败必须只意味着「不确定」，不能让整条取址失败。
+        const created = new Audio();
+        if (typeof created?.addEventListener !== 'function' || typeof created?.removeEventListener !== 'function') return null;
+        created.preload = 'metadata';
+        created.muted = true;
+        probeElement = created;
     }
     return probeElement;
 };
 
 const measure = (url: string, timeoutMs: number): Promise<number | null> => new Promise<number | null>(resolve => {
-    const audio = element();
+    let audio: HTMLAudioElement | null = null;
+    try {
+        audio = element();
+    } catch {
+        // `new Audio()` 自己抛错（被禁用的构造、异常实现）：按「量不了」处理。
+        resolve(null);
+        return;
+    }
     if (!audio) {
         resolve(null);
         return;
     }
 
     let settled = false;
-    let timer: number | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const cleanup = () => {
-        audio.removeEventListener('loadedmetadata', onLoaded);
-        audio.removeEventListener('error', onError);
-        if (timer !== null) window.clearTimeout(timer);
+        try {
+            audio!.removeEventListener('loadedmetadata', onLoaded);
+            audio!.removeEventListener('error', onError);
+        } catch { /* 元素没有事件接口，已经不需要它了 */ }
+        if (timer !== null) clearTimeout(timer);
         // 让这个元素停下来并放开连接；元素本身留着复用。
         try {
-            audio.pause();
-            audio.removeAttribute('src');
-            audio.load();
+            audio!.pause();
+            audio!.removeAttribute('src');
+            audio!.load();
         } catch { /* 元素已经不需要了 */ }
     };
 
@@ -71,14 +84,20 @@ const measure = (url: string, timeoutMs: number): Promise<number | null> => new 
     };
 
     const onLoaded = () => {
-        const seconds = audio.duration;
+        const seconds = audio!.duration;
         finish(Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : null);
     };
     const onError = () => finish(null);
 
-    audio.addEventListener('loadedmetadata', onLoaded);
-    audio.addEventListener('error', onError);
-    timer = window.setTimeout(() => finish(null), timeoutMs);
+    try {
+        audio.addEventListener('loadedmetadata', onLoaded);
+        audio.addEventListener('error', onError);
+    } catch {
+        // 有 length 但没有事件接口的桩：量不了，按「不确定」处理。
+        resolve(null);
+        return;
+    }
+    timer = setTimeout(() => finish(null), timeoutMs);
     audio.src = url;
 });
 
@@ -89,7 +108,7 @@ export const probeAudioDurationMs = async (url: string, timeoutMs = PROBE_TIMEOU
     if (pending >= MAX_PENDING) return null;
 
     pending += 1;
-    const run = queue.then(() => measure(url, timeoutMs));
+    const run = queue.then(() => measure(url, timeoutMs).catch(() => null));
     // 队列里只关心「上一条跑完了」，不关心它成没成。
     queue = run.catch(() => undefined).finally(() => { pending -= 1; });
     const value = await run;

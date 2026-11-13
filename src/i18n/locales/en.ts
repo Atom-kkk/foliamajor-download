@@ -1053,6 +1053,8 @@ export default {
       "theme-source-cover": { "title": "Theme source: cover colors", "description": "Generate song themes from the cover artwork palette" },
       "playback-auto-match-best-lyric": { "title": "Match best lyrics", "description": "Run automatic best lyric matching for the current song" },
       "playback-toggle-pure-music": { "title": "Mark or unmark as instrumental", "description": "Mark the current local song as instrumental so its lyrics are no longer matched automatically; run again to unmark" },
+      "download-current-song": { "title": "Download current song", "description": "Save this song as an audio file, from the same address the player uses" },
+      "clear-current-song-cache": { "title": "Clear cached audio and reload", "description": "Drop the cached copy of this song and fetch it again (wrong version, broken file)" },
       "visualizer-picker": { "title": "Pick a visualizer", "description": "Browse lyric animation modes and click one to switch" },
       "background-picker": { "title": "Pick a background", "description": "Browse background layouts and click one to switch" },
       "visualizer-still": { "title": "Visualizer: Still", "description": "Switch to the static low-resource visualizer" },

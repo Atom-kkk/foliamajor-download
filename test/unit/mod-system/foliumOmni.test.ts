@@ -226,7 +226,8 @@ describe('folium.omni.listProviders', () => {
     it('lists the built-in sources in the host order, the selected one marked, nothing of the account', () => {
         signIn('netease', 9_876_543);
         const providers = omniOf().listProviders();
-        expect(providers.map((provider) => provider.providerId).slice(0, 6)).toEqual(['netease', 'kugou', 'qq', 'bodian', 'ytm', 'spotify']);
+        // 本分支在 qq 之后插入了酷我直连源（providerRegistry 的注册顺序就是平台列表的顺序）。
+        expect(providers.map((provider) => provider.providerId).slice(0, 7)).toEqual(['netease', 'kugou', 'qq', 'kuwo', 'bodian', 'ytm', 'spotify']);
         expect(providers[0]).toEqual({
             providerId: 'netease',
             displayName: 'NetEase Cloud Music',

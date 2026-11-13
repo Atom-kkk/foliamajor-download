@@ -1053,6 +1053,8 @@ export default {
       "theme-source-cover": { "title": "Sumber tema: Warna sampul", "description": "Buat tema lagu dari palet warna sampul" },
       "playback-auto-match-best-lyric": { "title": "Cocokkan lirik terbaik", "description": "Jalankan pencocokan lirik terbaik otomatis untuk lagu saat ini" },
       "playback-toggle-pure-music": { "title": "Tandai atau hapus tanda instrumental", "description": "Tandai lagu lokal saat ini sebagai instrumental agar liriknya tidak lagi dicocokkan otomatis; jalankan lagi untuk menghapus tanda" },
+      "download-current-song": { "title": "Unduh lagu saat ini", "description": "Simpan lagu ini sebagai berkas audio, dari alamat yang sama dengan pemutar" },
+      "clear-current-song-cache": { "title": "Hapus audio tersimpan dan muat ulang", "description": "Buang salinan tersimpan lagu ini lalu ambil ulang (versi salah, berkas rusak)" },
       "visualizer-picker": { "title": "Pilih visualizer", "description": "Telusuri mode animasi lirik lalu klik untuk beralih" },
       "background-picker": { "title": "Pilih latar", "description": "Telusuri tata letak latar lalu klik untuk beralih" },
       "visualizer-still": { "title": "Visualizer: Still", "description": "Alihkan ke visualizer statis yang hemat sumber daya" },

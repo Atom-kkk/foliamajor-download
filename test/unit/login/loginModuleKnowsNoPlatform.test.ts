@@ -44,12 +44,20 @@ describe('what each platform declares for the sign-in window', () => {
             spotify: { letter: 'S', color: '#22c55e' },
             qishui: { letter: '汽', color: '#19a58c' },
             appleMusic: { letter: 'A', color: '#fa243c' },
+            // 本分支新增的三个源。它们没有账号（auth: false），但有平台标记：登录窗口之外的
+            // 平台列表要用同一个字母与颜色。
+            kuwo: { letter: '酷', color: '#f59e0b' },
+            xinghai: { letter: '星', color: '#6366f1' },
+            custom: { letter: '自', color: '#7c3aed' },
         });
     });
 
     it('its title and note, as text keys', () => {
         // The second lines a platform declares for single cases are pinned in loginView.test.ts.
-        const texts = Object.fromEntries(listOnlineMusicProviders().map(provider => {
+        // 只看真的会出现在登录窗口里的平台：本分支的 kuwo / xinghai / custom 没有账号（auth: false），
+        // omni.getLoginTexts 对它们回 null，没有标题与说明可钉。
+        const withSignIn = listOnlineMusicProviders().filter(provider => omni.getLoginTexts(provider.id));
+        const texts = Object.fromEntries(withSignIn.map(provider => {
             const { title, note } = omni.getLoginTexts(provider.id)!;
             return [provider.id, { title, note }];
         }));

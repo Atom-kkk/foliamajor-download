@@ -9,7 +9,7 @@ on:
       - 'docs/CODEMAP.md'
 
 permissions:
-  contents: read
+  contents: write
 
 # 串行执行：并发的两次 push 各自 checkout 后推同一个分支会撞车。
 concurrency:
@@ -31,7 +31,9 @@ jobs:
           # 在临时分支上用 workflow_dispatch 补跑的检查 GitHub 也不认，直接推和走 PR 合并都报
           # “2 of 2 required status checks are expected”（run 40492106867、40495357734）。
           # 保护规则只约束非管理员，所以用仓库管理员的 PAT（只授本仓库 contents: write）推送。
-          token: ${{ secrets.CODEMAP_PUSH_TOKEN }}
+          # 本仓库（fork）的 main 没有分支保护，不需要那枚 PAT：用仓库自带的 GITHUB_TOKEN 就够了，
+          # 它随仓库存在，不会像 CODEMAP_PUSH_TOKEN 那样缺失（缺了这一步会报 Input required and not supplied: token）。
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Node.js
         uses: actions/setup-node@v6

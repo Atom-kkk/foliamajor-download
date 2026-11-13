@@ -202,11 +202,20 @@ const searchSongs = async (
         cursor: page.cursor,
         limit: page.limit,
         fetch: (asked) => ask(call, target, async () => {
-            if (!selected) return omni.searchProviderSongs(target, query, asked, sessionOf(call));
-            if (omni.getActiveRequestGeneration() !== generation || omni.getActiveProviderSummary()?.providerId !== target) {
+            if (selected && (omni.getActiveRequestGeneration() !== generation || omni.getActiveProviderSummary()?.providerId !== target)) {
                 throw new DOMException('The selected source changed while the request waited', 'AbortError');
             }
-            return omni.searchSongs(query, asked, sessionOf(call));
+            // 单源的那条入口，而不是 omni.searchSongs：宿主 UI 的第一页会把最多三个其它源聚合进来
+            // （omni.ts 的 aggregateSearch），那会改掉这一页的 total、多问几个源、把别的平台的条目
+            // 混进来。mod 要的是「这个源的结果」，次数与游标都得可预测。
+            const answer = await omni.searchProviderSongs(target, query, asked, sessionOf(call));
+            // 答案回来之后再对一次：账号或选择在请求发出后变了，这一页就不要（与聚合路径、单源路径
+            // 同一个约定；单源入口自己不做这层校验）。
+            if (omni.getActiveRequestGeneration() !== generation
+                || (selected && omni.getActiveProviderSummary()?.providerId !== target)) {
+                throw new DOMException('The selected source or its account changed while the request was out', 'AbortError');
+            }
+            return answer;
         }, { activeRoute: selected }),
     });
     return freezePage(slice, slice.items.map(toFoliumOmniSong));

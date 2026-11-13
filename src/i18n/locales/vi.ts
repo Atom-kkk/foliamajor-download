@@ -1053,6 +1053,8 @@ export default {
       "theme-source-cover": { "title": "Nguồn chủ đề: Màu ảnh bìa", "description": "Tạo chủ đề bài hát từ bảng màu ảnh bìa" },
       "playback-auto-match-best-lyric": { "title": "Khớp lời bài hát tốt nhất", "description": "Tự động khớp lời bài hát tối ưu cho bài hiện tại" },
       "playback-toggle-pure-music": { "title": "Đánh dấu/bỏ nhạc không lời", "description": "Đánh dấu bài hát nội bộ là không lời để dừng tự khớp lời; chạy lại để bỏ đánh dấu" },
+      "download-current-song": { "title": "Tải bài hát hiện tại", "description": "Lưu bài hát này thành tệp âm thanh, dùng đúng địa chỉ mà trình phát dùng" },
+      "clear-current-song-cache": { "title": "Xóa âm thanh đã lưu và tải lại", "description": "Bỏ bản đã lưu của bài này rồi lấy lại địa chỉ (sai phiên bản, tệp hỏng)" },
       "visualizer-picker": { "title": "Chọn hiệu ứng thị giác", "description": "Duyệt chế độ hoạt họa lời và nhấp để chuyển" },
       "background-picker": { "title": "Chọn nền", "description": "Duyệt bố cục nền và nhấp để chuyển" },
       "visualizer-still": { "title": "Hiệu ứng thị giác: Still", "description": "Chuyển sang hiệu ứng tĩnh tiết kiệm tài nguyên" },

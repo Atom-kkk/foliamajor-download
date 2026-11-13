@@ -1053,6 +1053,8 @@ export default {
       "theme-source-cover": { "title": "主题来源：封面取色", "description": "直接从封面配色生成歌曲主题" },
       "playback-auto-match-best-lyric": { "title": "匹配最佳歌词", "description": "为当前歌曲运行自动最佳歌词匹配" },
       "playback-toggle-pure-music": { "title": "标记或取消纯音乐", "description": "把当前本地歌曲标记为纯音乐，不再为它自动匹配歌词；再执行一次取消标记" },
+      "download-current-song": { "title": "下载当前歌曲", "description": "把这首歌存成音频文件，用的是播放器那一条地址" },
+      "clear-current-song-cache": { "title": "清除缓存并重新加载", "description": "丢掉这首歌的缓存副本再重新取址（版本不对、文件坏了）" },
       "visualizer-picker": { "title": "选择可视化", "description": "浏览歌词动画模式，点击即可切换" },
       "background-picker": { "title": "选择背景", "description": "浏览背景布局，点击即可切换" },
       "visualizer-still": { "title": "可视化：静止", "description": "切换到低占用的静态可视化" },
