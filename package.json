@@ -1,14 +1,19 @@
 {
-  "name": "folia-major",
-  "productName": "Folia",
+  "name": "foliamajor-download",
+  "productName": "Folia Download",
   "desktopName": "folia-major.desktop",
-  "description": "Lyrics Reimagine",
+  "description": "Folia Download — 多音源与下载增强的全屏歌词播放器",
+  "homepage": "https://github.com/Atom-kkk/foliamajor-download#readme",
   "author": {
-    "name": "chthollyphile",
-    "email": "chthollyphile@users.noreply.github.com"
+    "name": "Atom-kkk",
+    "email": "Atom-kkk@users.noreply.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Atom-kkk/foliamajor-download.git"
   },
   "private": true,
-  "version": "0.7.28",
+  "version": "0.8.1",
   "license": "AGPL-3.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -79,8 +84,8 @@
     "manual:ai-probe": "node test/manual/ai_probe.mjs"
   },
   "build": {
-    "appId": "top.izuna.foliamajor",
-    "productName": "Folia",
+    "appId": "com.foliamajordownload.folia",
+    "productName": "Folia Download",
     "beforePack": "build/beforePack.cjs",
     "afterPack": "build/afterPack.cjs",
     "electronLanguages": [
@@ -214,7 +219,7 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${name}-${version}-mac-${arch}.${ext}"
     },
     "win": {
       "artifactName": "${productName}-Setup-${version}.${ext}",

@@ -28,7 +28,7 @@ import { qqRecommendations } from './qqRecommendations';
 import { clearQqGuessYouLikeCatalog } from './qqGuessYouLike';
 import { resetQqSearchFallbackMemory, searchQqCollections, searchQqSongs } from './qqSearch';
 import { getQqSubscriptionStatus, qqMutations } from './qqMutations';
-import { describeQqLoginFailure, qqAccountHintNote, qqCheckFailure, qqHintFailure } from './qqLoginFailure';
+import { describeQqLoginFailure, QQ_LOGIN_NOT_CONFIGURED, qqAccountHintNote, qqCheckFailure, qqHintFailure } from './qqLoginFailure';
 import { describeQqFailure } from './qqFailure';
 import { getQqCloudCollection, getQqCloudTracks, getQqListTracks, qqListKindOf } from './qqLists';
 import { qqExplore } from './qqExplore';
@@ -586,6 +586,15 @@ let declaredChannels: string[] | null = null;
 let channelProbe: Promise<void> | null = null;
 let channelProbeRetryAt = 0;
 
+// 后端的登录路由回 501 = 这一次部署没有 QQ_SESSION_SECRET（见 worker/qq.ts 的注释）：会话封不进 token，
+// 扫码流程整条不存在。探到之后不再要码——要到的码没有地方放，只会让登录窗口白转一圈。
+// 曲库与播放不受影响：这条判断只管登录，播放照旧匿名可用。
+let loginRoutesMissing = false;
+
+const isNotConfiguredAnswer = (error: unknown): boolean => (
+    error instanceof OnlineProviderError && error.httpStatus === 501
+);
+
 const CHANNEL_PROBE_RETRY_DELAY_MS = 30_000;
 
 /**
@@ -605,7 +614,9 @@ const refreshDeclaredChannels = (forceRetry = false): Promise<void> => {
             noteQqBackendDeclaration(response?.data);
             channelProbeRetryAt = 0;
         })
-        .catch(() => {
+        .catch((error: unknown) => {
+            // 501：后端没有 QQ_SESSION_SECRET，登录整条不存在，记下来别再问。
+            if (isNotConfiguredAnswer(error)) loginRoutesMissing = true;
             // 旧后端或暂时性网络错误都先回落到硬编码数组；清掉 Promise 才能在稍后或打开登录时重试。
             channelProbe = null;
             channelProbeRetryAt = Date.now() + CHANNEL_PROBE_RETRY_DELAY_MS;
@@ -623,6 +634,8 @@ const scansWithAppOnly = (): boolean => (
 // 后端只宣告一个通道、或者只给 QQ 音乐 App 扫码时回空数组 —— 登录窗口不显示选择器，直接取二维码，
 // 比多一次无意义的点击更好。
 const getLoginMethods = (): LoginMethod[] => {
+    // 后端没有登录路由时不给任何方式：点进去必定失败的那一步不该出现。
+    if (loginRoutesMissing) return [];
     void refreshDeclaredChannels();
     if (!declaredChannels) return QQ_LOGIN_METHODS.filter(method => QQ_UNDECLARED_LOGIN_METHOD_IDS.includes(method.id));
     if (scansWithAppOnly()) return [];
@@ -673,6 +686,7 @@ export const resetQqLoginChannelCache = (): void => {
     declaredChannels = null;
     channelProbe = null;
     channelProbeRetryAt = 0;
+    loginRoutesMissing = false;
     lastQrLogin = null;
     lastAccountHintKey = null;
     resolvedLoginShape = null;
@@ -1140,10 +1154,21 @@ export const qqProvider: OnlineMusicProvider = {
         resolveLoginMethods,
         // 没拿到 key 或图片就在那一步失败：空 key 只会换来后端的 400，空图片会让登录窗口一直转圈。
         async startLogin(methodId) {
+            // 已经知道后端没有登录路由：不再要码（要来的码也没地方封），直接说清楚是什么情况。
+            if (loginRoutesMissing) throw new OnlineProviderError('unsupported', QQ_LOGIN_NOT_CONFIGURED, 'qq');
             qrKeyRequestedAt = Date.now();
             lastAccountHintKey = null;
             const channel = resolveQrLoginMethodId(methodId);
-            const response = await requestQq<any>('login_qr_key', { channel });
+            let response: any;
+            try {
+                response = await requestQq<any>('login_qr_key', { channel });
+            } catch (error) {
+                if (isNotConfiguredAnswer(error)) {
+                    loginRoutesMissing = true;
+                    throw new OnlineProviderError('unsupported', QQ_LOGIN_NOT_CONFIGURED, 'qq', error);
+                }
+                throw error;
+            }
             const key = String(response?.data?.unikey || '');
             if (key.trim()) {
                 lastQrLogin = { key, channel };

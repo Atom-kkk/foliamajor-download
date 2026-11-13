@@ -2,6 +2,12 @@
 
 [简体中文](CONTRIBUTING.md) | [English](CONTRIBUTING.en.md)
 
+> **This is the upstream contribution guide; "mainline" below means upstream
+> `chthollyphile/folia-major`.** This branch is an unofficial fork: send PRs and issues to this
+> repository, not upstream. The changes in this branch are listed in
+> [docs/fork-changes.md](docs/fork-changes.md). Contributing here means you agree to license your
+> contribution under AGPL-3.0.
+
 Thank you for contributing to Folia. You can help by reporting issues, providing reproduction steps, verifying fixes, improving documentation, or submitting code. This guide sets out the requirements for contributions to the mainline. Please read it before making changes or submitting a pull request (PR).
 
 ## Understand the boundaries of mainline contributions

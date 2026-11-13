@@ -44,6 +44,8 @@ type OwnSettingsState = {
     visualizerMode: VisualizerMode;
     randomVisualizerModePerSong: boolean;
     randomVisualizerModes: RandomVisualizerMode[];
+    /** 每 N 句歌词换一次样式；0 = 关闭。 */
+    randomVisualizerModeLines: number;
     /** Snap animated glow blur radii to a bounded set. See components/visualizer/wordGlow.ts. */
     glowBlurQuantize: boolean;
     /** 智能动感模式, shared by every visualizer and background that draws beat FX: no one style's tuning. */
@@ -59,6 +61,7 @@ type OwnSettingsState = {
     handleSetVisualizerMode: (mode: VisualizerMode, options?: SetVisualizerModeOptions) => void;
     handleToggleRandomVisualizerModePerSong: (enable: boolean, options?: { notify?: boolean }) => void;
     handleSetRandomVisualizerModes: (modes: readonly VisualizerMode[]) => void;
+    handleSetRandomVisualizerModeLines: (lines: number) => void;
     handleToggleGlowBlurQuantize: (enable: boolean) => void;
     handleSetSmartBeat: (patch: SmartBeatPatch) => void;
 };
@@ -112,6 +115,16 @@ const declaredFields = (set: (fields: object) => void, get: () => Fields) => {
     return fields as unknown as VisualizerTuningSettings;
 };
 
+const RANDOM_MODE_LINES_KEY = 'random_visualizer_mode_lines';
+/** 间隔上限：再长就几乎等于不切换了。 */
+const MAX_RANDOM_MODE_LINES = 16;
+
+const readStoredRandomModeLines = (): number => {
+    if (typeof localStorage === 'undefined') return 0;
+    const value = Number(localStorage.getItem(RANDOM_MODE_LINES_KEY));
+    return Number.isFinite(value) && value > 0 ? Math.min(MAX_RANDOM_MODE_LINES, Math.round(value)) : 0;
+};
+
 export const useVisualizerSettingsStore = create<VisualizerSettingsState>((set, get) => ({
     ...declaredFields(set as (fields: object) => void, get as unknown as () => Fields),
     disableVisualizerVignette: getStoredBoolean('disable_visualizer_vignette', false),
@@ -124,6 +137,7 @@ export const useVisualizerSettingsStore = create<VisualizerSettingsState>((set, 
     visualizerMode: readStoredVisualizerMode(),
     randomVisualizerModePerSong: getStoredBoolean('random_visualizer_mode_per_song', false),
     randomVisualizerModes: readStoredRandomVisualizerModes(),
+    randomVisualizerModeLines: readStoredRandomModeLines(),
     glowBlurQuantize: readStoredGlowBlurQuantize(),
     smartBeat: readStoredSmartBeatSettings(),
     handleSetSmartBeat: (patch) => {
@@ -220,6 +234,17 @@ export const useVisualizerSettingsStore = create<VisualizerSettingsState>((set, 
         setStoredString(RANDOM_VISUALIZER_MODES_STORAGE_KEY, JSON.stringify(next));
         set({ randomVisualizerModes: next });
     },
+    handleSetRandomVisualizerModeLines: (lines) => {
+        const next = Number.isFinite(lines) && lines > 0 ? Math.min(MAX_RANDOM_MODE_LINES, Math.round(lines)) : 0;
+        if (typeof window !== 'undefined') localStorage.setItem(RANDOM_MODE_LINES_KEY, String(next));
+        set({ randomVisualizerModeLines: next });
+        setStatusMessage({
+            type: 'info',
+            text: next > 0
+                ? i18n.t('status.randomVisualizerModeLinesOn', { count: next, defaultValue: `每 ${next} 句随机切换歌词样式` })
+                : i18n.t('status.randomVisualizerModeLinesOff', { defaultValue: '已关闭逐句随机歌词样式' }),
+        });
+    },
     handleToggleGlowBlurQuantize: (enable) => {
         if (typeof window !== 'undefined') {
             localStorage.setItem(GLOW_BLUR_QUANTIZE_STORAGE_KEY, String(enable));
@@ -250,6 +275,8 @@ export const selectVisualizerSettingsSnapshot = (state: VisualizerSettingsState)
     handleToggleDisableVisualizerGeometricBackground: state.handleToggleDisableVisualizerGeometricBackground,
     handleToggleDisableVisualizerVignette: state.handleToggleDisableVisualizerVignette,
     handleToggleRandomVisualizerModePerSong: state.handleToggleRandomVisualizerModePerSong,
+    handleSetRandomVisualizerModeLines: state.handleSetRandomVisualizerModeLines,
+    randomVisualizerModeLines: state.randomVisualizerModeLines,
     randomVisualizerModePerSong: state.randomVisualizerModePerSong,
     randomVisualizerModes: state.randomVisualizerModes,
     handleSetRandomVisualizerModes: state.handleSetRandomVisualizerModes,

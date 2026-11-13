@@ -6,6 +6,8 @@ import { directoryCommands } from './directoryCommands';
 import { artistCommands } from './artistCommands';
 import { searchCommands } from './searchCommands';
 import { playbackCommands } from './playbackCommands';
+import { downloadCommands } from './downloadCommands';
+import { cacheCommands } from './cacheCommands';
 import { settingsCommands } from './settingsCommands';
 import { hifiCommands } from './hifiCommands';
 import { navigationCommands } from './navigationCommands';
@@ -85,6 +87,8 @@ export const ALL_COMMAND_PALETTE_COMMANDS: CommandPaletteCommand[] = assertExecu
     ...artistCommands,
     ...searchCommands,
     ...playbackCommands,
+    ...downloadCommands,
+    ...cacheCommands,
     ...settingsCommands,
     ...hifiCommands,
     ...navigationCommands,

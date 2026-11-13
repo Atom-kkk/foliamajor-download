@@ -173,12 +173,12 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
         providerId: activeProviderId,
         localRow: localMusicState.activeRow,
     });
-    // 在线列表只在账户已就绪时显示（无账户 / 解析中 / 未登录各有面板）。探索页签没有卡片列表：它是平台自己的推荐页。
+    // 在线列表在账户就绪后显示；未登录（游客）也显示——歌单页是公开推荐，电台页是公开的 FM / 日推 / 推荐歌单。
+    // 只有「无账户的平台」与「解析中」才换成面板。
     const showOnlineList = isOnlineTab
         && homeViewTab !== 'explore'
         && activeAccountView !== 'accountless'
-        && activeAccountView !== 'resolving'
-        && activeAccountView !== 'guest';
+        && activeAccountView !== 'resolving';
     // On the explore tab the wall (队列拼贴) shows the page's entries, not the play queue: it is
     // offered there once the page has an entry to show, with or without a song on the player.
     const opensExploreWall = homeViewTab === 'explore' && online.canUseExplore;
@@ -494,7 +494,11 @@ export const Grid3D: React.FC<Grid3DProps> = (props) => {
                     <div className="flex flex-1 w-full items-center justify-center" aria-busy="true">
                         <Loader2 className="animate-spin opacity-30" size={28} />
                     </div>
-                ) : isOnlineTab && activeAccountView === 'guest' ? (
+                ) : isOnlineTab && activeAccountView === 'guest'
+                    && homeViewTab !== 'explore'
+                    && !onlineList.isLoading
+                    && onlineList.items.length === 0 ? (
+                    // 游客有公开内容就先看内容；真的一条都没有（或来源没接公开数据）才回到登录入口。
                     // One button: it opens the sign-in window, where the platform is chosen.
                     <HomeLoginPanel account={account} />
                 ) : homeViewTab === 'explore' ? (

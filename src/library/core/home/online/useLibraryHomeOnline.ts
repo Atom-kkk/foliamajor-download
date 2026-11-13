@@ -38,9 +38,17 @@ export const useLibraryHomeOnline = (
         userId: online.user?.id ?? null,
         canUseAlbums: online.canUseAlbums,
         canUseRadio: online.canUseRadio,
+        publicPlaylists: online.isGuest,
     });
 
-    const playlistCards = useMemo(() => buildOnlinePlaylistCards(online.collections, t), [online.collections, t]);
+    // 游客没有「我的歌单」，歌单页改展示公开推荐（与电台那份数据同源，已经由上面的 effect 读过）。
+    const playlistCards = useMemo(
+        () => buildOnlinePlaylistCards(
+            online.isGuest ? (radioFeed.data?.recommended ?? []) : online.collections,
+            t,
+        ),
+        [online.collections, online.isGuest, radioFeed.data, t],
+    );
     const albumCards = useMemo(() => buildOnlineAlbumCards(favoriteAlbums.data, t), [favoriteAlbums.data, t]);
     const radioCards = useMemo(
         () => buildOnlineRadioCards(radioFeed.data, { t, personalFmModeLabel }),

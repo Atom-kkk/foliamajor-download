@@ -90,7 +90,9 @@ export const LibraryTuiOnlineList: React.FC<LibraryTuiListCommonProps & {
 }> = ({ tab, online, list, account, accountsOpen, onCloseAccounts, homeActions, onOpenGridView, directoryKey, hiddenScope, ...common }) => {
     const { t } = useTranslation();
     const isGuest = online.accountView === 'guest';
-    const showAccounts = isGuest || accountsOpen;
+    // 游客也先看内容：歌单页是公开推荐，电台页是公开的 FM / 日推 / 推荐歌单，探索页是平台自己的推荐页。
+    // 平台列表改由 F2 打开（未登录时同样可用），不再一进来就顶掉内容。
+    const showAccounts = accountsOpen;
     const showList = !showAccounts && online.accountView !== 'accountless' && online.accountView !== 'resolving';
 
     useLibraryHomeListRegistration({
@@ -126,7 +128,7 @@ export const LibraryTuiOnlineList: React.FC<LibraryTuiListCommonProps & {
                 accentColor={common.accentColor}
                 isDaylight={common.isDaylight}
                 heading={heading}
-                onClose={isGuest ? undefined : onCloseAccounts}
+                onClose={onCloseAccounts}
             />
         );
     }

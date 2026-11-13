@@ -501,6 +501,7 @@ export default function App() {
         visualizerMode,
         randomVisualizerModePerSong,
         randomVisualizerModes,
+        randomVisualizerModeLines,
         handleSetVisualizerMode,
     } = useVisualizerSettingsStore(useShallow(selectVisualizerSettingsSnapshot));
 
@@ -537,10 +538,13 @@ export default function App() {
 
     useRandomVisualizerMode({
         currentSong,
-        enabled: randomVisualizerModePerSong,
+        // 逐句随机开着时也走这条 hook；两种模式由 linesPerSwitch 决定谁生效。
+        enabled: randomVisualizerModePerSong || randomVisualizerModeLines > 0,
         modes: randomVisualizerModes,
         visualizerMode,
         setVisualizerMode: handleSetVisualizerMode,
+        lineIndex: currentLineIndex,
+        linesPerSwitch: randomVisualizerModeLines,
     });
 
     const setLyrics = useMemo(

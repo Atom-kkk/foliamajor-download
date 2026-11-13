@@ -28,6 +28,7 @@ const O = {
     scene: option(LYRICS, 'scene', 'ui.scene'),
     // Not a row of its own: it lives in the scene window, so a search for it lands on the group with the scene row.
     soundTracing: option(LYRICS, 'soundTracing', 'ui.soundTracing'),
+    randomLyricStyle: option(LYRICS, 'randomLyricStyle', 'options.randomLyricStyle'),
     daylight: option(THEME, 'daylightMode', 'options.daylightMode'),
     preset: option(THEME, 'themePreset', 'options.themePresets'),
     themePark: option(THEME, 'openThemePark', 'options.openThemePark'),
@@ -54,6 +55,8 @@ const AppearancePage: React.FC = () => {
     const visualizerMode = useVisualizerSettingsStore(state => state.visualizerMode);
     const randomEnabled = useVisualizerSettingsStore(state => state.randomVisualizerModePerSong);
     const nativeBlurEnabled = usePlayerChromeSettingsStore(state => state.enablePlayerPageNativeBlur);
+    const randomVisualizerModeLines = useVisualizerSettingsStore(state => state.randomVisualizerModeLines);
+    const setRandomVisualizerModeLines = useVisualizerSettingsStore(state => state.handleSetRandomVisualizerModeLines);
 
     return (
         <>
@@ -64,6 +67,12 @@ const AppearancePage: React.FC = () => {
                 </Row>
                 <Row option={O.scene} tag={t('ui.sceneBeta')} onClick={onOpenSceneWindow}>
                     <Value><ChosenSceneName /></Value>
+                </Row>
+                <Row option={O.randomLyricStyle} note={t('options.randomLyricStyleDesc')}>
+                    <Toggle
+                        checked={randomVisualizerModeLines > 0}
+                        onChange={enabled => setRandomVisualizerModeLines(enabled ? 4 : 0)}
+                    />
                 </Row>
             </Group>
 

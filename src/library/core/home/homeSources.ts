@@ -58,12 +58,16 @@ export const resolveHomeOnlineSource = ({
 }): LibraryHomeOnlineSource => {
     const isNetease = providerId === 'netease';
     const user = provider?.user || (isNetease ? fallbackUser : null);
+    // 游客（provider 摘要上的 `guest`）：`user` 是账号层给的稳定游客 id，只用来给推荐 / 公开歌单做归属，
+    // 不能当作「已经登录」。账户视图仍按未登录（guest）走，登录入口照旧。
+    const isGuest = provider?.guest === true;
     return {
         providerId,
         providerLabel: provider?.shortName || provider?.displayName || fallbackLabel,
         provider,
         user,
-        accountView: resolveOnlineProviderAccountView({ provider, hasUser: Boolean(user), platformAvailable }),
+        isGuest,
+        accountView: resolveOnlineProviderAccountView({ provider, hasUser: Boolean(user) && !isGuest, platformAvailable }),
         needsRelogin: provider?.error === 'auth-required',
         collections: provider?.collections || (isNetease
             ? [...fallbackPlaylists, ...(fallbackCloud ? [fallbackCloud] : [])]
@@ -153,6 +157,7 @@ export const onlineHomeTitleKey = (tab: LibraryHomeOnlineTab): string => (
 
 /**
  * 在线列表是否在加载：歌单页签在账户已登录、歌单还没到时；专辑 / 电台页签在对应资源读取中时。
+ * 游客的歌单页展示的是公开推荐（和电台同一份资源），所以按电台那份的读取状态算。
  * 页签不可用时不算加载（显示不可用原因）。
  */
 export const resolveOnlineHomeLoading = ({
@@ -162,11 +167,13 @@ export const resolveOnlineHomeLoading = ({
     radioFeedLoading,
 }: {
     tab: LibraryHomeTabKey;
-    source: Pick<LibraryHomeOnlineSource, 'canUsePlaylists' | 'canUseAlbums' | 'canUseRadio' | 'collections' | 'user'>;
+    source: Pick<LibraryHomeOnlineSource, 'canUsePlaylists' | 'canUseAlbums' | 'canUseRadio' | 'collections' | 'user' | 'isGuest'>;
     favoriteAlbumsLoading: boolean;
     radioFeedLoading: boolean;
 }): boolean => (
-    (tab === 'playlist' && source.canUsePlaylists && source.collections.length === 0 && source.user !== null)
+    (tab === 'playlist' && source.canUsePlaylists && (
+        source.isGuest ? radioFeedLoading : (source.collections.length === 0 && source.user !== null)
+    ))
     || (tab === 'albums' && source.canUseAlbums && favoriteAlbumsLoading)
     || (tab === 'radio' && source.canUseRadio && radioFeedLoading)
 );

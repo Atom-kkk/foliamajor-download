@@ -17,6 +17,10 @@ export const O = {
     sync: option(SERVICES, 'r2Sync', 'options.r2Sync'),
     syncUrl: option(SERVICES, 'r2SyncWorkerUrl', 'options.r2SyncWorkerUrl'),
     syncToken: option(SERVICES, 'r2SyncToken', 'options.r2SyncToken'),
+    // 自定义（第三方）音源：地址与令牌，见 services/onlineMusic/custom。搜索索引用它，行也用它。
+    customSource: option(SERVICES, 'customSource', 'options.customSource'),
+    customSourceUrl: option(SERVICES, 'customSourceUrl', 'options.customSourceUrl'),
+    customSourceToken: option(SERVICES, 'customSourceToken', 'options.customSourceToken'),
     discord: option(SERVICES, 'discordRichPresence', 'options.discordRichPresence', { electronOnly: true }),
     scrobble: option(SERVICES, 'scrobbleSettings', 'options.neteaseScrobble'),
     transparentBackground: option(STREAMING, 'transparentPlayerBackground', 'options.transparentPlayerBackground'),

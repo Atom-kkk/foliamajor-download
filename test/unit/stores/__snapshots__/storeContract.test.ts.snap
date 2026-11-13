@@ -139,6 +139,7 @@ exports[`store contract > keeps every localStorage key the stores read or write 
   "prevent_display_sleep_during_playback",
   "queue_add_behavior",
   "queue_palette_keep_open",
+  "random_visualizer_mode_lines",
   "random_visualizer_modes",
   "reduce_motion_collectionMorph",
   "reduce_motion_follow_system",

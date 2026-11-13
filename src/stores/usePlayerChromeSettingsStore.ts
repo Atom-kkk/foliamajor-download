@@ -114,7 +114,7 @@ export const usePlayerChromeSettingsStore = create<PlayerChromeSettingsState>((s
     ),
     hidePlayerRightPanelButton: getStoredBoolean('hide_player_right_panel_button', false),
     alwaysShowPlayerBackButton: getStoredBoolean('always_show_player_back_button', false),
-    alwaysShowTrackSwitchButtons: getStoredBoolean('always_show_track_switch_buttons', false),
+    alwaysShowTrackSwitchButtons: getStoredBoolean('always_show_track_switch_buttons', true),
     alwaysShowMainWindowTitlebar: getStoredBoolean('always_show_main_window_titlebar', false),
     playerHeaderBlur: getStoredBoolean('player_header_blur', false),
     titlebarSide: readTitlebarSide(),

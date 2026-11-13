@@ -6,12 +6,20 @@ import { qqStatusFailure } from './qqFailure';
 // src/services/onlineMusic/qq/qqLoginFailure.ts
 // QQ 音乐登录失败时交给登录窗口的事实。后端的错误是什么意思，只在这里说。
 
+/**
+ * 后端没有 QQ_SESSION_SECRET 时的说法（`worker/qq.ts`：登录路由回 501，曲库路由照常）。
+ * 扫码登录要靠后端把会话封进 token，没有密钥就没有这条流程；这句话在 qqProvider 里抛，
+ * 在这里被认出来，登录窗口照「后端的这项能力没起来」处理，而不是「原因不明，再试一次」。
+ */
+export const QQ_LOGIN_NOT_CONFIGURED = 'QQ 登录未配置：后端没有 QQ_SESSION_SECRET，扫码登录不可用（曲库与播放不受影响）';
+
 // 登录的某一步抛了错（都出自 qqTransport.ts 的 requestQq）。
 export const describeQqLoginFailure = (_step: LoginStep, error: unknown): LoginFailureDetail | null => {
     // 请求是裸 fetch：连不上时它抛 TypeError。
     if (error instanceof TypeError) return { case: 'unreachable' };
     if (!(error instanceof OnlineProviderError)) return null;
     if (error.message.startsWith(QQ_API_NOT_RUNNING)) return { case: 'local-service-unavailable' };
+    if (error.message === QQ_LOGIN_NOT_CONFIGURED) return { case: 'local-service-unavailable', message: QQ_LOGIN_NOT_CONFIGURED };
     const status = qqStatusFailure(error);
     // 502 而回答里没有 QQ 的码：后端没能连上 QQ（断网时就是这样），不是 QQ 拒绝了。后端照样要过一会才肯再给
     // 二维码，等多久留在事实里，重来的操作先等。

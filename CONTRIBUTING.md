@@ -2,6 +2,10 @@
 
 [简体中文](CONTRIBUTING.md) | [English](CONTRIBUTING.en.md)
 
+> **本文件是上游的贡献指南，下文说的「主线」指上游 `chthollyphile/folia-major`。**
+> 本分支是非官方修改分支：请把 PR / Issue 提交到本仓库，不要提交给上游；本分支的改动清单见
+> [docs/fork-changes.md](docs/fork-changes.md)。向本分支贡献即表示你同意按 AGPL-3.0 授权你的贡献。
+
 感谢你愿意参与 Folia。你可以通过报告问题、补充复现步骤、验证修复、改进文档或提交代码来贡献。本指南说明主线代码贡献的要求，请在开始修改和提交 Pull Request（PR）之前阅读。
 
 ## 先理解主线贡献的边界

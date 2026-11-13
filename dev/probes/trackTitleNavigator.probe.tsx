@@ -55,6 +55,8 @@ const TrackTitleNavigatorProbe: React.FC = () => {
                     likeDisabled: true,
                     invokeCommandById: () => {},
                     canInvokeCommandById: () => true,
+                    onDownload: () => {},
+                    canDownload: false,
                 }}
                 onCommitBottomBarOffset={() => {}}
                 trackNavigation={{
