@@ -576,6 +576,8 @@ export const compressConfig = (config: any): string => {
     }
     if (config.visualizerMode) minified.vm = config.visualizerMode;
     if (config.randomVisualizerModePerSong !== undefined) minified.rvms = config.randomVisualizerModePerSong;
+    // 每 N 句换一次歌词样式（本分支新增）。0 表示不按句切，所以 0 也要写出去。
+    if ((config as ConfigFields).randomVisualizerModeLines !== undefined) (minified as ConfigFields).rvml = (config as ConfigFields).randomVisualizerModeLines;
     if (config.randomVisualizerModes !== undefined) minified.rvm = normalizeRandomVisualizerModes(config.randomVisualizerModes);
     if (config.visualizerBackgroundMode) minified.vbm = config.visualizerBackgroundMode;
     if (config.backgroundOpacity !== undefined) minified.bo = config.backgroundOpacity;
@@ -683,6 +685,7 @@ export const decompressConfig = (str: string): any => {
         || parsed.t !== undefined
         || parsed.vm !== undefined
         || parsed.rvms !== undefined
+        || parsed.rvml !== undefined
         || parsed.rvm !== undefined
         || parsed.ccb !== undefined
         || parsed.dvgb !== undefined
@@ -737,6 +740,7 @@ export const decompressConfig = (str: string): any => {
         }
         if (parsed.vm) decompressed.visualizerMode = parsed.vm;
         if (parsed.rvms !== undefined) decompressed.randomVisualizerModePerSong = parsed.rvms;
+        if (parsed.rvml !== undefined) (decompressed as ConfigFields).randomVisualizerModeLines = parsed.rvml;
         if (parsed.rvm !== undefined) decompressed.randomVisualizerModes = normalizeRandomVisualizerModes(parsed.rvm);
         if (parsed.vbm) decompressed.visualizerBackgroundMode = parsed.vbm;
         if (parsed.bo !== undefined) decompressed.backgroundOpacity = parsed.bo;

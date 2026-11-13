@@ -23,6 +23,7 @@ export const APPEARANCE_DESTINATIONS = {
     'lattice_poster_tint_intensity': { config: null, why: '队列拼贴墙（Lattice）的设置，OBS 页面没有这面墙（用户 2026-11-08 定：配置码也用于 web 版 OBS 链接，只加 OBS 页面看得到的）' },
     'lattice_poster_tint_use_custom_color': { config: null, why: '队列拼贴墙（Lattice）的设置，OBS 页面没有这面墙（用户 2026-11-08 定：配置码也用于 web 版 OBS 链接，只加 OBS 页面看得到的）' },
     'lattice_vignette': { config: null, why: '队列拼贴墙（Lattice）的设置，OBS 页面没有这面墙（用户 2026-11-08 定：配置码也用于 web 版 OBS 链接，只加 OBS 页面看得到的）' },
+    'random_visualizer_mode_lines': { config: 'randomVisualizerModeLines' },
     'wall_tools_queue_island_open': { config: null, why: '墙面工具的队列浮岛开没开，OBS 页面没有（用户 2026-11-08 定：配置码也用于 web 版 OBS 链接，只加 OBS 页面看得到的）' },
     // src/stores/useLibraryWallLookStore.ts
     'library_wall_backdrop_blur': { config: 'libraryWallBackdropBlur' },

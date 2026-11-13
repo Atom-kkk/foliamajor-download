@@ -2,16 +2,16 @@ import { OnlineProviderError } from '../../types/onlineMusic';
 import type { OnlineMusicProvider, OnlineProviderId, ProviderCapabilities } from '../../types/onlineMusic';
 import type { SongResult } from '../../types';
 import { getPlaybackSourceRef } from '../../utils/appPlaybackGuards';
-import { neteaseProvider } from './netease/neteaseProvider';
-import { kugouProvider } from './kugou/kugouProvider';
-import { qqProvider } from './qq/qqProvider';
-import { kuwoProvider } from './kuwo/kuwoProvider';
-import { bodianProvider } from './bodian/bodianProvider';
-import { ytmProvider } from './ytm/ytmProvider';
-import { spotifyProvider } from './spotify/spotifyProvider';
-import { qishuiProvider } from './qishui/qishuiProvider';
-import { appleMusicProvider } from './appleMusic/appleMusicProvider';
-import { fnmusicProvider } from './fnmusic/fnmusicProvider';
+import { neteaseProvider as neteaseBuiltIn } from './netease/neteaseProvider';
+import { kugouProvider as kugouBuiltIn } from './kugou/kugouProvider';
+import { qqProvider as qqBuiltIn } from './qq/qqProvider';
+import { kuwoProvider as kuwoBuiltIn } from './kuwo/kuwoProvider';
+import { bodianProvider as bodianBuiltIn } from './bodian/bodianProvider';
+import { ytmProvider as ytmBuiltIn } from './ytm/ytmProvider';
+import { spotifyProvider as spotifyBuiltIn } from './spotify/spotifyProvider';
+import { qishuiProvider as qishuiBuiltIn } from './qishui/qishuiProvider';
+import { appleMusicProvider as appleMusicBuiltIn } from './appleMusic/appleMusicProvider';
+import { fnmusicProvider as fnmusicBuiltIn } from './fnmusic/fnmusicProvider';
 import { customProvider } from './custom/customProvider';
 import { xinghaiProvider } from './xinghai/xinghaiProvider';
 import { withGuestAccess } from './guest/guestAccess';
@@ -122,20 +122,31 @@ export const requireOnlineMusicProviderForSong = (song: SongResult): OnlineMusic
 // 账号层因此始终有一个 userId，游客的歌单/喜欢清单直接答空。
 // 只包内置平台，不改 `registerOnlineMusicProvider` 本身：账号层「没人登录 -> 账号离开」的语义对
 // 其它 provider（mod 源、测试里的假 adapter）仍然是原来的合同，这里只是产品层的决定。
-const registerBuiltIn = (provider: OnlineMusicProvider): void => registerOnlineMusicProvider(withGuestAccess(provider));
+// 包装写成「常量 = withGuestAccess(模块导出的 provider)」而不是一个 registerBuiltIn(provider) 的包装调用：
+// 注册行要保持「每行一个 registerOnlineMusicProvider，参数是 <id>Provider」的字面形状，D122
+// （test/unit/dedicatus/contracts/providerRegistration.test.ts）靠它认出平台 id，认不出就等于
+// 这个平台不受架构测试约束。
+const neteaseProvider = withGuestAccess(neteaseBuiltIn);
+const kugouProvider = withGuestAccess(kugouBuiltIn);
+const qqProvider = withGuestAccess(qqBuiltIn);
+const kuwoProvider = withGuestAccess(kuwoBuiltIn);
+const bodianProvider = withGuestAccess(bodianBuiltIn);
+const ytmProvider = withGuestAccess(ytmBuiltIn);
+const spotifyProvider = withGuestAccess(spotifyBuiltIn);
+const qishuiProvider = withGuestAccess(qishuiBuiltIn);
+const appleMusicProvider = withGuestAccess(appleMusicBuiltIn);
+const fnmusicProvider = withGuestAccess(fnmusicBuiltIn);
 
-registerBuiltIn(neteaseProvider);
-registerBuiltIn(kugouProvider);
-registerBuiltIn(qqProvider);
-registerBuiltIn(kuwoProvider);
-registerBuiltIn(bodianProvider);
-registerBuiltIn(ytmProvider);
-registerBuiltIn(spotifyProvider);
-
-registerBuiltIn(qishuiProvider);
-
-registerBuiltIn(appleMusicProvider);
-registerBuiltIn(fnmusicProvider);
+registerOnlineMusicProvider(neteaseProvider);
+registerOnlineMusicProvider(kugouProvider);
+registerOnlineMusicProvider(qqProvider);
+registerOnlineMusicProvider(kuwoProvider);
+registerOnlineMusicProvider(bodianProvider);
+registerOnlineMusicProvider(ytmProvider);
+registerOnlineMusicProvider(spotifyProvider);
+registerOnlineMusicProvider(qishuiProvider);
+registerOnlineMusicProvider(appleMusicProvider);
+registerOnlineMusicProvider(fnmusicProvider);
 // 自定义（第三方）音源：没有账号（auth: false），不需要游客身份。sourceRef.providerId 就是 `custom`，
 // 缓存键 online:custom:<id> 与别的源分开；没配地址时 getAvailability() 报 not-configured，不影响内置源。
 registerOnlineMusicProvider(customProvider);

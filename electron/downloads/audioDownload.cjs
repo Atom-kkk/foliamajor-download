@@ -11,6 +11,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { createSenderGuardedHandler } = require('../ipcAccessGuard.cjs');
 const { Readable } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
 
@@ -45,6 +46,13 @@ const MIME_EXTENSIONS = {
 const extensionFromMime = (mimeType) => MIME_EXTENSIONS[String(mimeType ?? '').toLowerCase()] || 'mp3';
 
 const registerAudioDownloadIpc = ({ ipcMain, isTrusted, getWindow, app, dialog, getCachePaths }) => {
+    // 来源校验走登记的守卫工厂（electron/ipcAccessGuard.cjs，D605）：写盘通道不该由别的窗口调。
+    const guarded = (channel, handler) => createSenderGuardedHandler({
+        channel,
+        isTrusted: (event) => typeof isTrusted !== 'function' || isTrusted(event.sender),
+        handler,
+    });
+
     /** 弹保存框，把建议名规范成 `名字.扩展名`。返回用户选的路径，取消时 null。 */
     const pickTarget = async (extension, suggestedName) => {
         const window = typeof getWindow === 'function' ? getWindow() : null;
@@ -69,11 +77,7 @@ const registerAudioDownloadIpc = ({ ipcMain, isTrusted, getWindow, app, dialog, 
             : `${safe.replace(/\.[^.]+$/, '')}.${extension}`;
     };
 
-    ipcMain.handle('download-audio', async (event, payload) => {
-        if (typeof isTrusted === 'function' && !isTrusted(event.sender)) {
-            throw new Error('Untrusted renderer attempted to call the download-audio channel.');
-        }
-
+    ipcMain.handle('download-audio', guarded('download-audio', async (_event, payload) => {
         const url = typeof payload?.url === 'string' ? payload.url.trim() : '';
         if (!/^https?:\/\//i.test(url)) {
             throw new Error('Only http(s) audio URLs can be downloaded.');
@@ -107,7 +111,7 @@ const registerAudioDownloadIpc = ({ ipcMain, isTrusted, getWindow, app, dialog, 
         }
 
         return { canceled: false, filePath: target, bytes };
-    });
+    }));
 
     /**
      * 把播放时缓存的那份字节直接存成文件。
@@ -116,11 +120,7 @@ const registerAudioDownloadIpc = ({ ipcMain, isTrusted, getWindow, app, dialog, 
      * 从根上不会发生。`fromCache: false` 表示这首没缓存，调用方回落到按地址下载。
      */
     if (typeof getCachePaths === 'function') {
-        ipcMain.handle('download-cached-audio', async (event, payload) => {
-            if (typeof isTrusted === 'function' && !isTrusted(event.sender)) {
-                throw new Error('Untrusted renderer attempted to call the download-cached-audio channel.');
-            }
-
+        ipcMain.handle('download-cached-audio', guarded('download-cached-audio', async (_event, payload) => {
             const cacheKey = typeof payload?.cacheKey === 'string' ? payload.cacheKey.trim() : '';
             if (!cacheKey) throw new Error('A cache key is required to save a cached song.');
 
@@ -140,7 +140,7 @@ const registerAudioDownloadIpc = ({ ipcMain, isTrusted, getWindow, app, dialog, 
             }
             await fs.promises.copyFile(dataPath, target);
             return { canceled: false, fromCache: true, filePath: target, bytes: stat.size };
-        });
+        }));
     }
 };
 

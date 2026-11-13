@@ -12,6 +12,7 @@
 // 它不可能是整首。HEAD 不给长度时退回 `Range: bytes=0-0` 读 `Content-Range`。
 
 const { net } = require('electron');
+const { createSenderGuardedHandler } = require('./ipcAccessGuard.cjs');
 
 const TIMEOUT_MS = 8_000;
 
@@ -47,14 +48,18 @@ const sizeOf = async (url) => {
 };
 
 const registerAudioSizeProbeIpc = ({ ipcMain, isTrusted }) => {
-    ipcMain.handle('probe-audio-size', async (event, url) => {
-        if (typeof isTrusted === 'function' && !isTrusted(event.sender)) {
-            throw new Error('Untrusted renderer attempted to call the probe-audio-size channel.');
-        }
+    // 来源校验走登记的守卫工厂（electron/ipcAccessGuard.cjs，D605）。
+    const guarded = (channel, handler) => createSenderGuardedHandler({
+        channel,
+        isTrusted: (event) => typeof isTrusted !== 'function' || isTrusted(event.sender),
+        handler,
+    });
+
+    ipcMain.handle('probe-audio-size', guarded('probe-audio-size', async (_event, url) => {
         const target = typeof url === 'string' ? url.trim() : '';
         if (!/^https?:\/\//i.test(target)) return null;
         return sizeOf(target);
-    });
+    }));
 };
 
 module.exports = { registerAudioSizeProbeIpc, sizeOf };

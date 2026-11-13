@@ -13,6 +13,8 @@
 // `X-Token` 是客户端自签的 base64 JSON（device_id / ip / timestamp / random），无签名校验；
 // device_id 在进程生命周期内固定，token 60 秒换一次。
 
+const { createSenderGuardedHandler } = require('../ipcAccessGuard.cjs');
+
 const TIMEOUT_MS = 8_000;
 // token 里带服务端会校验的 timestamp。以前缓存 60 秒，正好卡在过期边界上：复用到最后一秒的
 // token 会被当成过期拒绝，而 4xx 又不重试，于是同一首歌一会儿能播、一会儿只剩试听。
@@ -146,16 +148,20 @@ const fetchFromHosts = async (query) => {
 };
 
 const registerXinghaiIpc = ({ ipcMain, isTrusted, fetch: fetchImpl = fetchFromHosts }) => {
-    ipcMain.handle('xinghai-url', (event, query) => {
-        if (typeof isTrusted === 'function' && !isTrusted(event.sender)) {
-            throw new Error('Untrusted renderer attempted to call the xinghai-url channel.');
-        }
+    // 来源校验走登记的守卫工厂（electron/ipcAccessGuard.cjs，D605）。
+    const guarded = (channel, handler) => createSenderGuardedHandler({
+        channel,
+        isTrusted: (event) => typeof isTrusted !== 'function' || isTrusted(event.sender),
+        handler: (_event, query) => handler(query),
+    });
+
+    ipcMain.handle('xinghai-url', guarded('xinghai-url', (query) => {
         const source = String(query?.source ?? '');
         if (!SOURCES.has(source)) {
             throw new Error(`XingHai does not serve the source "${source}"`);
         }
         return fetchImpl({ ...query, source });
-    });
+    }));
 };
 
 module.exports = {

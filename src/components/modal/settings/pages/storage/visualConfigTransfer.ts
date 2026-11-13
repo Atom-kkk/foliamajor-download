@@ -138,6 +138,9 @@ export const applyImportedConfig = (config: any, keys: string[], theme: ConfigTh
     if (has('randomVisualizerModePerSong')) {
         storeVisualizer.handleToggleRandomVisualizerModePerSong(Boolean(config.randomVisualizerModePerSong));
     }
+    if (has('randomVisualizerModeLines')) {
+        storeVisualizer.handleSetRandomVisualizerModeLines(Number((config as { randomVisualizerModeLines?: unknown }).randomVisualizerModeLines) || 0);
+    }
     if (has('visualizerOpacity')) {
         storeVisualizer.handleSetVisualizerOpacity(config.visualizerOpacity);
     }

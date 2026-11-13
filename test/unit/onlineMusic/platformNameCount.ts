@@ -35,6 +35,11 @@ export const PLATFORM_NAMES = {
     qishui: /qishui|汽水音乐/i,
     appleMusic: /applemusic|apple music|苹果音乐/i,
     fnmusic: /fnmusic|飞牛/i,
+    // 这三个是本分支新增的源。`custom` 是普通英文词（主题里也有 custom 选项、DOM 里有 custom element），
+    // 只认它自己的标识：配置键、客户端/配置/设置组件与 provider，否则满仓都会被记成一个平台。
+    kuwo: /kuwo|酷我/i,
+    xinghai: /xinghai|星海/i,
+    custom: /folia\.customSource|customsource(client|config|rows|provider)|usecustomsource|自定义音源/i,
 } as const;
 
 export type CountedPlatform = keyof typeof PLATFORM_NAMES;

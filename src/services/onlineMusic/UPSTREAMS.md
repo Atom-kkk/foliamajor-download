@@ -126,3 +126,32 @@
 - **我们不改上游**：Folia 不覆盖 fnOS 网页端文件，不保留客户端标识、签名或协议实现，只适配其公开 HTTP 接口。
 - **上游变了怎么跟**：fnOS 网页端改接口或字段后，`fnmusicApiBridge.cjs` 的请求与 `fnmusicProvider.ts` 的归一化要跟着改；登录失败、接口返回变化以 `[FnMusic]` 前缀日志为准。
 - **测试**：`test/unit/fnmusic/` 覆盖归一化、登录参数构造、翻页与可播性检查；桥接层逻辑在 `test/unit/electron/` 下用替身测操作白名单与加密配置恢复。
+
+## 酷我（`kuwo`）
+
+本分支新增的直连源，只在桌面端可用（网页版与 Docker 没有它）：搜索端点不回 `Access-Control-Allow-Origin`，渲染进程（`file://`，origin 为 `null`）的 `fetch` 到不了。
+
+- **上游**：酷我自己的三个公开端点 —— 搜索 `search.kuwo.cn/r.s`、取址 `nmobi.kuwo.cn/mobi.s?type=convert_url_with_sign`、歌词 `m.kuwo.cn/newh5/singles/songinfoandlrc`。实现取自 LX 自定义源「無名 v0.0.3」里的「直连酷我」一段，去掉了脚本运行时。
+- **版本**：没有外部 npm 包，请求用主进程的 `net.fetch`。端点变了要改 `src/services/onlineMusic/kuwo/kuwo.ts` 里的 URL 构造与字段解析。
+- **怎么用**：三条通道统一走 `electron/kuwo/kuwoIpc.cjs`（`kuwo-search` / `kuwo-url` / `kuwo-lyric`）。渲染层只能传参数，URL、查询串、请求头由主进程拼死，参数逐个 clamp（`limit` 1–100、`offset` 0–100000、`rid` 只留数字），每请求 12 秒上限。搜索答复是单引号 JS 对象字面量，用逐字段正则解析（`field()` / `rowsOf()`），绝不 `eval` 远端文本，`\'` 与常见 HTML 实体在解析时还原。
+- **声明边界**：档位只声明 `standard` / `high`（酷我对 `2000kflac` 经常回 256k，声明无损只会让缓存把低档记成无损，实际档位按返回的 `bitrate` 标）；`getAvailability` 恒为 `unknown`，因为它从不下架也从不「受限」，有没有地址由取地址那一刻说了算。
+- **上游变了怎么跟**：以搜索答复的字段名、取址答复的 `url` 字段、歌词答复的 `lyric` 为准；解析失败会在 `[Kuwo]` 前缀日志里留下原始答复片段。`test/unit/onlineMusic/kuwoSource.test.ts` 用真实答复形状（单引号对象、`\'`、`&nbsp;`、20201 这类 bitrate）验证解析，抓不到端点改版。
+
+## 星海（`xinghai`）
+
+本分支新增的换址源，只在桌面端可用：后端认 `X-Token` / `X-Client` 两个自定义头，而 `OPTIONS` 预检回 405，渲染层带自定义头的请求会被浏览器层拦掉。
+
+- **上游**：一个 GET 换一个地址 —— `GET https://yy.zddyr.top/lx/api/?source=<wy|tx|kg|mg|qs>&songmid=…&quality=…`，主域名连不上或 5xx 时换备份域名 `zrcdy.dpdns.org`。主进程 `electron/xinghai/xinghaiIpc.cjs`，通道 `xinghai-url`，参数白名单固定（`source`/`name`/`singer`/`songmid`/`hash`/`albumId`/`interval`/`albumName`/`quality`），不是通用转发。
+- **版本**：没有外部 npm 包。`X-Token` 是客户端自签的 base64 JSON（`device_id` / `ip` / `timestamp` / `random`），只复用 30 秒 —— 早期缓存 60 秒正好卡在过期边界，会表现为「同一首歌一会儿能播、一会儿只剩试听」；`401/403` 立刻换一枚重试一次。
+- **接哪些平台**：只接 `netease`（wy）与 `qq`（tx），只列 `mediaId` 能直接当后端 id 用的平台。它**不搜索**，只在播放与下载兜底时按原平台 id 换址；不声明歌词（后端 `lrc` 格式无保证，声明了会盖掉内置源的好词），也不声明 `lossless`。
+- **上游变了怎么跟**：后端换域名或改参数名，改 `src/services/onlineMusic/xinghai/xinghai.ts` 的 URL 构造与 `xinghaiIpc.cjs` 的白名单。`test/unit/onlineMusic/xinghaiSource.test.ts` 覆盖 200 / 403 / 500 三种答复，抓不到后端真的改了协议。
+
+## 自定义音源（`custom`）
+
+把仓库之外的一个 HTTP 服务接成 provider，网页版与桌面端都可用（没有 CORS 要求时由服务自己开）。
+
+- **上游**：用户自己部署的服务，合同写在 `src/services/onlineMusic/custom/README.md`：`GET {base}/search?keyword=&limit=&offset=`、`GET {base}/url?id=&quality=`、`GET {base}/lyric?id=`（可选）、`GET {base}/song?id=`（可选，没有就 404）。
+- **版本**：没有外部 npm 包。配置两个来源，localStorage 优先：`folia.customSource.v1 = { baseUrl, token, enabled }`，其次 `VITE_CUSTOM_SOURCE_BASE` / `VITE_CUSTOM_SOURCE_TOKEN`。没配地址时 `getAvailability()` 是 `not-configured`，不影响任何内置源，也不会去搜歌。
+- **怎么用**：`customSourceClient.ts` 负责合同与解析（也认 `songs` / `data` / 裸数组三种搜索答复），`customProvider.ts` 是 provider 实现。设置页「设置 → 连接与集成 → 服务 → 自定义音源」三行：开关、地址、令牌，另有「测试连通」（真发一次 `/search?keyword=test&limit=1`，把「端口错」「没起服务」「缺 CORS 头」分辨开）与「保存并重载」（写进 localStorage 后重载窗口，provider registry 在注册时决定可用性）。
+- **声明边界**：档位只到 `high`，用户选 `lossless` / `hires` 时 omni 会先 clamp 成 `high`，缓存副本也按 `high` 记；服务自己声明的 `quality` 比请求档低且不是 `preview` 时抛 `invalid-response`，不把 low 悄悄记成 high（不声明 `quality` 的服务仍按请求档交付，这是已知缺口）。
+- **上游变了怎么跟**：合同是这份 README，改了要同步改 `customSourceClient.ts` 与 README 里的最小服务示例。

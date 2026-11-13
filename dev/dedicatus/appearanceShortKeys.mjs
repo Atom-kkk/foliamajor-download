@@ -233,6 +233,7 @@ export const APPEARANCE_SHORT_KEYS = [
     'config.partitaTuning=pt',
     'config.pendoloTuning=pdt',
     'config.playerHeaderBlur=phb',
+    'config.randomVisualizerModeLines=rvml',
     'config.randomVisualizerModePerSong=rvms',
     'config.randomVisualizerModes=rvm',
     'config.scratchpadHandleStyle=sphs',

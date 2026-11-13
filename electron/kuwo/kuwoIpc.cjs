@@ -12,6 +12,7 @@
 // 每个请求 12s 上限；返回 `{ status, text }`，解析留给渲染层——它已经有单引号对象的解析器了。
 
 const { net } = require('electron');
+const { createSenderGuardedHandler } = require('../ipcAccessGuard.cjs');
 
 const TIMEOUT_MS = 12_000;
 
@@ -91,12 +92,13 @@ const fetchText = async (url) => {
  * 测试可以传 `{ ipcMain: fake, fetchText: fake }`，不经过 Electron。
  */
 const registerKuwoIpc = ({ ipcMain, isTrusted, fetch: fetchImpl = fetchText }) => {
-  const guard = (channel, handler) => (event, query) => {
-    if (typeof isTrusted === 'function' && !isTrusted(event.sender)) {
-      throw new Error(`Untrusted renderer attempted to call the ${channel} channel.`);
-    }
-    return handler(query);
-  };
+  // 来源校验走登记的守卫工厂（electron/ipcAccessGuard.cjs，D605）：注入 isTrusted 时非第一方窗口的
+  // 调用直接抛错；没注入（单测）按放行处理，与这个文件原来的行为一致。
+  const guard = (channel, handler) => createSenderGuardedHandler({
+    channel,
+    isTrusted: (event) => typeof isTrusted !== 'function' || isTrusted(event.sender),
+    handler: (_event, query) => handler(query),
+  });
 
   ipcMain.handle('kuwo-search', guard('kuwo-search', query => fetchImpl(searchUrl(query))));
   ipcMain.handle('kuwo-url', guard('kuwo-url', query => fetchImpl(audioUrl(query))));
