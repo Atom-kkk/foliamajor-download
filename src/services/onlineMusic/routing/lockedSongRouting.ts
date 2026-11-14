@@ -69,7 +69,15 @@ export const forgetLockedSongMappings = (): void => {
     archiveMisses.clear();
 };
 
-const normalizeText = (value: string): string => value
+/**
+ * opencc 的繁转简**不动**「妳」：`為妳寫的歌` → `为妳写的歌`，而曲库存的是 `为你写的歌`。
+ * 这一个字的差别让标题判据给 0 分——2026-11-15 日志里「為妳寫的歌 / 方大同」就是这么失败的：
+ * 酷狗明明第一条返回 `为你写的歌 / 方大同 / 197 s`（与卡片上的 3:17 一致），却被判成「没有足够像的一首」。
+ * 这两个字在歌名里是同义的异体写法，归一成「你」不会把两首不同的歌混起来。
+ */
+const unifySecondPerson = (value: string): string => value.replace(/[妳祢]/g, '你');
+
+const normalizeText = (value: string): string => unifySecondPerson(value)
     .toLowerCase()
     // 括号里的版本说明（live / remix / 伴奏 / 电视剧主题曲…）不参与比较：同一首歌的各种版本标题常带这些。
     .replace(/[（(\[【][^）)\]】]*[）)\]】]/g, '')
@@ -100,8 +108,9 @@ const traditionalToSimplified = (): Promise<((text: string) => string) | null> =
 export const simplifiedSubject = async (song: SongResult): Promise<SongResult> => {
     const convert = await traditionalToSimplified();
     if (!convert) return song;
-    const name = convert(song.name ?? '');
-    const artists = (song.artists ?? []).map(artist => ({ ...artist, name: convert(artist.name ?? '') }));
+    // 查询词也走一遍 unifySecondPerson：搜出去的若还是「为妳写的歌」，重排的曲库就召回不到。
+    const name = unifySecondPerson(convert(song.name ?? ''));
+    const artists = (song.artists ?? []).map(artist => ({ ...artist, name: unifySecondPerson(convert(artist.name ?? '')) }));
     return { ...song, name, artists };
 };
 
@@ -463,6 +472,7 @@ const lookupArchive = async (song: SongResult, quality: AudioQualityPreference):
     for (const asked of queries) {
         if (tried >= 2) break;
         const hits = await searchWebArchive(asked.text);
+        console.info('[Fallback] 存档站搜索', { query: asked.text, hits: hits.length });
         if (hits.length === 0) {
             console.info('[Fallback] 存档站没有搜到', { song: song.name, query: asked.text });
             continue;
@@ -528,8 +538,17 @@ const lookupArchive = async (song: SongResult, quality: AudioQualityPreference):
  *
  * 记忆只针对「没查到」：查到了也不能缓存地址——存档站的地址是一次性签名，存下来只会放不出来。
  */
+let archiveUnavailableLogged = false;
+
 export const tryWebArchive = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
-    if (!isWebArchiveAvailable()) return null;
+    if (!isWebArchiveAvailable()) {
+        // 一次都不说会让日志里分不清「这一步没跑」和「跑了没找到」——2026-11-15 就为此查了半天。
+        if (!archiveUnavailableLogged) {
+            archiveUnavailableLogged = true;
+            console.info('[Fallback] 存档站不可用：这个构建没有主进程通道（web-archive-search）');
+        }
+        return null;
+    }
     const key = getPlaybackSongKey(song);
     const missedAt = archiveMisses.get(key);
     if (missedAt !== undefined && Date.now() - missedAt < ARCHIVE_MISS_TTL_MS) return null;

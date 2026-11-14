@@ -77,3 +77,42 @@ describe('titles with a subtitle, and one artist under two names', () => {
         expect(scoreSongMatch(subject, cover as never)).toBe(0);
     });
 });
+
+// 「妳」不在 opencc 的繁转简表里：`為妳寫的歌` → `为妳写的歌`，而曲库存的是 `为你写的歌`。
+// 2026-11-15 的实测：酷狗对这两种查询返回同一批结果（第一条 `为你写的歌 / 方大同 / 197 s`），
+// 但标题判据按字形比较，`为妳写的歌` 对 `为你写的歌` 给 0 分，整条兜底链因此失败。
+describe('a title written with the feminine second person', () => {
+    const spotify = {
+        id: '5qmtIGToI36Z9sNE7bvghH',
+        name: '為妳寫的歌',
+        artists: [{ id: '1', name: '方大同' }],
+        album: { id: '1', name: '橙月' },
+        durationMs: 197_000,
+        sourceRef: { kind: 'online' as const, providerId: 'spotify' as const, mediaId: '5qmtIGToI36Z9sNE7bvghH' },
+    };
+    const kugouHit = {
+        id: 'dc8087e99400f25bf1da9d541018cd19',
+        name: '为你写的歌',
+        artists: [{ id: '2', name: '方大同' }],
+        album: { id: '2', name: '橙月' },
+        durationMs: 197_000,
+        sourceRef: { kind: 'online' as const, providerId: 'kugou' as const, mediaId: 'dc8087e99400f25bf1da9d541018cd19' },
+    };
+
+    it('normalizes it to 你 before comparing, so the title matches', async () => {
+        // 真实路径就是这样：先 simplifiedSubject（opencc 把「為」转成「为」、unifySecondPerson
+        // 把「妳」转成「你」），再拿简体视图去比候选。
+        const subject = await simplifiedSubject(spotify as never);
+        expect(scoreSongMatch(subject, kugouHit as never)).toBeGreaterThanOrEqual(85);
+    });
+
+    it('also normalizes the search words', async () => {
+        const subject = await simplifiedSubject(spotify as never);
+        expect(subject.name).toBe('为你写的歌');
+    });
+
+    it('does not confuse two different songs', () => {
+        const other = { ...kugouHit, name: '特别的人' };
+        expect(scoreSongMatch(spotify as never, other as never)).toBe(0);
+    });
+});
