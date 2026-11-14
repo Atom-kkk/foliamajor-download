@@ -63,6 +63,9 @@ const normalizeText = (value: string): string => value
     .toLowerCase()
     // 括号里的版本说明（live / remix / 伴奏 / 电视剧主题曲…）不参与比较：同一首歌的各种版本标题常带这些。
     .replace(/[（(\[【][^）)\]】]*[）)\]】]/g, '')
+    // 「标题 - 副标题」这种写法（Spotify 常见：`有一種悲傷 - 電影《…》主題曲`）只比标题。
+    // 只认两侧带空格的破折号，`Rock-Paper-Scissors` 这种连写的标题不受影响。
+    .replace(/\s+[-–—]\s+.*$/, '')
     .replace(/[\s\-_.,!?'"`·、，。！？：；~]/g, '');
 
 /**
@@ -115,7 +118,14 @@ export const scoreSongMatch = (song: SongResult, candidate: SongResult): number 
     if (wanted.length > 0 && found.length > 0) {
         const shared = wanted.some(name => found.some(other => other.includes(name) || name.includes(other)));
         // 一个歌手都对不上，多半是同名不同曲：标题分数再高也不够。
-        if (!shared) return 0;
+        // 例外是同一个艺人在各平台的署名不同（A-Lin / 黄丽玲、G.E.M. 邓紫棋 / 邓紫棋）：
+        // 只在**标题完全一致、长度差不超过 1 秒**时才认——那是同一个录音的强证据，翻唱不会同时满足
+        // （「有一種悲傷」237 s 对翻唱 233/236 s 就不满足）。放过的这一档刚好够阈值（85）。
+        if (!shared) {
+            const sameLength = song.durationMs > 0 && candidate.durationMs > 0
+                && Math.abs(song.durationMs - candidate.durationMs) <= 1_000;
+            return sameLength && title === candidateTitle ? MATCH_THRESHOLD : 0;
+        }
         score += 25;
     }
 

@@ -43,3 +43,37 @@ describe('fallback matching across character sets', () => {
         expect(scoreSongMatch(subject, neteaseCandidate as never)).toBeGreaterThanOrEqual(85);
     });
 });
+
+// 另外两种对不上的常见情形（2026-11-14 第二份日志）：
+// 1) 平台把副标题写进曲名：`有一種悲傷 - 電影《…》主題曲`，曲库里只有「有一种悲伤」。
+// 2) 同一个艺人在两边署名不同：A-Lin / 黄丽玲。
+describe('titles with a subtitle, and one artist under two names', () => {
+    const spotifyWithSubtitle = {
+        id: '3ayrHkyorPEpeOBvZ76SwG',
+        name: '有一種悲傷 - 電影《比悲傷更悲傷的故事》主題曲',
+        artists: [{ id: '1', name: 'A-Lin' }],
+        album: { id: '1', name: '比悲傷更悲傷的故事' },
+        durationMs: 237_000,
+        sourceRef: { kind: 'online' as const, providerId: 'spotify' as const, mediaId: '3ayrHkyorPEpeOBvZ76SwG' },
+    };
+    const neteaseOriginal = {
+        id: '1363920368',
+        name: '有一种悲伤',
+        artists: [{ id: '2', name: '黄丽玲' }],
+        album: { id: '2', name: '比悲傷更悲傷的故事' },
+        durationMs: 237_000,
+        sourceRef: { kind: 'online' as const, providerId: 'netease' as const, mediaId: '1363920368' },
+    };
+
+    it('ignores the subtitle and accepts the same recording under another artist name', async () => {
+        const subject = await simplifiedSubject(spotifyWithSubtitle as never);
+        expect(subject.name).toContain('有一种悲伤');
+        expect(scoreSongMatch(subject, neteaseOriginal as never)).toBeGreaterThanOrEqual(85);
+    });
+
+    it('still refuses a cover: same title, different length', async () => {
+        const cover = { ...neteaseOriginal, durationMs: 233_000, artists: [{ id: '3', name: '马也_Crabbit' }] };
+        const subject = await simplifiedSubject(spotifyWithSubtitle as never);
+        expect(scoreSongMatch(subject, cover as never)).toBe(0);
+    });
+});
