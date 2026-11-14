@@ -65,6 +65,33 @@ const normalizeText = (value: string): string => value
     .replace(/[（(\[【][^）)\]】]*[）)\]】]/g, '')
     .replace(/[\s\-_.,!?'"`·、，。！？：；~]/g, '');
 
+/**
+ * 把歌名与歌手转成简体，用来**搜索**和**比较**。
+ *
+ * 平台之间的字形不一致很常见：Spotify 的曲目名是繁体（「說好的幸福呢」），网易云、酷我的曲库存的是
+ * 简体（「说好的幸福呢」）。不做这一步时，标题直接对不上，`scoreSongMatch` 给 0 分，兜底整条链作废
+ * ——2026-11-14 的日志里就是 `网易云里也没有足够像的一首 {"bestScore":0}`。
+ *
+ * opencc-js 是登记的重型包（D306：不许进首屏），所以这里懒加载：只有真的走到兜底匹配才付这份代价。
+ * 加载失败（离线、包被裁掉）时退回原字形，不影响别的候选。
+ */
+let converter: Promise<((text: string) => string) | null> | null = null;
+const traditionalToSimplified = (): Promise<((text: string) => string) | null> => {
+    converter ??= import('opencc-js')
+        .then(module => module.Converter({ from: 't', to: 'cn' }) as (text: string) => string)
+        .catch(() => null);
+    return converter;
+};
+
+/** 搜索与比较用的视图：歌名、歌手都转成简体，其余字段原样。只为单测导出。 */
+export const simplifiedSubject = async (song: SongResult): Promise<SongResult> => {
+    const convert = await traditionalToSimplified();
+    if (!convert) return song;
+    const name = convert(song.name ?? '');
+    const artists = (song.artists ?? []).map(artist => ({ ...artist, name: convert(artist.name ?? '') }));
+    return { ...song, name, artists };
+};
+
 const artistNamesOf = (song: SongResult): string[] => (song.artists ?? [])
     .map(artist => normalizeText(artist.name || ''))
     .filter(Boolean);
@@ -194,8 +221,10 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
     if (running) return await running;
 
     const search = (async (): Promise<UnifiedSong | null> => {
-        const artist = (song.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
-        const query = [song.name, artist].filter(Boolean).join(' ').trim();
+        // 搜索与比较都用简体视图：第三方曲库里同一首歌常是另一种字形（繁体「說好的幸福呢」）。
+        const subject = await simplifiedSubject(song);
+        const artist = (subject.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
+        const query = [subject.name, artist].filter(Boolean).join(' ').trim();
         if (!query) return null;
 
         const page = await provider.search!.searchSongs(query, 15, 0);
@@ -204,8 +233,8 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
         for (const candidate of page.items) {
             // 同名不同版本（伴奏 / 现场 / 翻唱）在评分上几乎与原版持平，直接排除。
             // 只靠 scoreSongMatch 会把「我们俩 (伴奏)」当成原版放出来。
-            if (isDifferentVersion(song.name, candidate.name)) continue;
-            const score = scoreSongMatch(song, candidate);
+            if (isDifferentVersion(subject.name, candidate.name)) continue;
+            const score = scoreSongMatch(subject, candidate);
             if (score > bestScore) {
                 best = candidate;
                 bestScore = score;
@@ -256,8 +285,10 @@ const bridgeThroughNetease = async (song: SongResult, quality: AudioQualityPrefe
     const xinghai = getOnlineMusicProvider(XINGHAI_SOURCE_ID);
     if (!netease?.search?.searchSongs || !xinghai?.playback?.getAudioSource) return null;
 
-    const artist = (song.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
-    const query = [song.name, artist].filter(Boolean).join(' ').trim();
+    // 搜索与比较都用简体视图：Spotify 给的是繁体曲目名（「說好的幸福呢」），网易云存的是简体。
+    const subject = await simplifiedSubject(song);
+    const artist = (subject.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
+    const query = [subject.name, artist].filter(Boolean).join(' ').trim();
     if (!query) return null;
 
     const page = await netease.search.searchSongs(query, 15, 0);
@@ -265,15 +296,15 @@ const bridgeThroughNetease = async (song: SongResult, quality: AudioQualityPrefe
     let bestScore = 0;
     for (const candidate of page.items) {
         if (candidate.sourceRef.kind !== 'online' || candidate.sourceRef.providerId !== 'netease') continue;
-        if (isDifferentVersion(song.name, candidate.name)) continue;
-        const score = scoreSongMatch(song, candidate);
+        if (isDifferentVersion(subject.name, candidate.name)) continue;
+        const score = scoreSongMatch(subject, candidate);
         if (score > bestScore) {
             best = candidate;
             bestScore = score;
         }
     }
     if (!best || bestScore < MATCH_THRESHOLD) {
-        console.info('[Fallback] 网易云里也没有足够像的一首', { song: song.name, bestScore });
+        console.info('[Fallback] 网易云里也没有足够像的一首', { song: song.name, query, bestScore });
         return null;
     }
 

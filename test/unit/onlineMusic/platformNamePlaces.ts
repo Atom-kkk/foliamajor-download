@@ -106,7 +106,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/services/onlineMusic/qq/qqProvider.ts': { n: { kugou: 1 }, kind: 'doc' },
     'src/services/onlineMusic/qq/qqTransport.ts': { n: { netease: 1 }, kind: 'doc' },
     'src/services/onlineMusic/resourceCache.ts': { n: { netease: 2 }, kind: 'doc' },
-    'src/services/onlineMusic/routing/lockedSongRouting.ts': { n: { kuwo: 6, xinghai: 8, custom: 1 }, kind: 'list', why: 'the order of the fallback sources and the one each song skips' },
+    'src/services/onlineMusic/routing/lockedSongRouting.ts': { n: { netease: 18, qq: 3, spotify: 2, kuwo: 10, xinghai: 19, custom: 1 }, kind: 'list', why: 'the order of the fallback sources, the one each song skips, and the last step that looks the song up on netease and swaps its address in' },
     'src/services/onlineMusic/xinghai/xinghai.ts': { n: { netease: 1, qq: 1, kuwo: 3 }, kind: 'list', why: 'the table that turns a provider id into the shorthand this backend asks for; only the platforms whose mediaId is that id are listed, and a note on why kuwo is not one of them' },
     'src/services/onlineMusic/resourceKeys.ts': { n: { netease: 1, kugou: 1 }, kind: 'stored', why: 'cache keys: one platform\'s covers under a second key version, another\'s songs under keys from before the keys carried a platform' },
     'src/services/onlineMusic/xinghai/xinghaiProvider.ts': { n: { kuwo: 1 }, kind: 'doc' },
