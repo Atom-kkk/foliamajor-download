@@ -302,13 +302,22 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
 const CROSS_PLATFORMS = ['netease', 'kugou'] as const;
 
 /** 在某个平台的搜索结果里挑最像的一条；没有就像素返回 null。 */
-const bestCandidate = (subject: SongResult, items: readonly UnifiedSong[], platformId: OnlineProviderId): { song: UnifiedSong; score: number } | null => {
+const bestCandidate = (
+    subject: SongResult,
+    items: readonly UnifiedSong[],
+    platformId: OnlineProviderId,
+    options?: { titleBlind?: boolean },
+): { song: UnifiedSong; score: number } | null => {
     let best: UnifiedSong | null = null;
     let bestScore = 0;
     for (const candidate of items) {
         if (candidate.sourceRef.kind !== 'online' || candidate.sourceRef.providerId !== platformId) continue;
         if (isDifferentVersion(subject.name, candidate.name)) continue;
-        const score = scoreSongMatch(subject, candidate);
+        let score = scoreSongMatch(subject, candidate);
+        // 标题对不上时（平台给的是英文名），只在这条查询本身就是「只搜歌手」时才认。
+        if (score < MATCH_THRESHOLD && options?.titleBlind && sameLineupAndLength(subject, candidate)) {
+            score = MATCH_THRESHOLD;
+        }
         if (score > bestScore) {
             best = candidate;
             bestScore = score;
@@ -328,32 +337,43 @@ const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualit
     const query = [subject.name, artist].filter(Boolean).join(' ').trim();
     if (!query) return null;
 
+    // 两条查询：先是「标题 + 歌手」，不行再只搜歌手。
+    // 第二条是为标题语言不一致准备的（Spotify 把《不该》写成 `Shouldn't Be`，
+    // 用英文名去搜酷狗只会召回《发如雪》《晴天》，而只搜歌手时第一条就是《不该》）。
+    const queries = artist && artist !== query
+        ? [{ text: query, titleBlind: false }, { text: artist, titleBlind: true }]
+        : [{ text: query, titleBlind: false }];
+
     for (const platformId of CROSS_PLATFORMS) {
         // 歌本来就来自这一家：前面的星海候选已经按它自己的 id 换过一次，不必再搜。
         if (origin.kind === 'online' && origin.providerId === platformId) continue;
         const provider = getOnlineMusicProvider(platformId);
         if (!provider?.search?.searchSongs) continue;
         if (provider.getAvailability && !provider.getAvailability().configured) continue;
-        try {
-            const page = await provider.search.searchSongs(query, 15, 0);
-            const found = bestCandidate(subject, page.items, platformId);
-            if (!found) {
-                console.info('[Fallback] 这个平台里没有足够像的一首', { song: song.name, query, platform: platformId });
-                continue;
+        for (const asked of queries) {
+            try {
+                const page = await provider.search.searchSongs(asked.text, 15, 0);
+                const found = bestCandidate(subject, page.items, platformId, { titleBlind: asked.titleBlind });
+                if (!found) {
+                    console.info('[Fallback] 这个平台里没有足够像的一首', { song: song.name, query: asked.text, platform: platformId });
+                    continue;
+                }
+                const source = await xinghai.playback.getAudioSource(found.song, quality);
+                if (!source?.url || source.preview) continue;
+                const expectedMs = found.song.durationMs > 0 ? found.song.durationMs : song.durationMs;
+                if (await isClipAudio(source.url, expectedMs, { priority: true })) continue;
+                console.info('[Fallback] 改由同曲换址', {
+                    song: song.name,
+                    via: platformId,
+                    matched: found.song.name,
+                    score: found.score,
+                    // 标题判据没走通、靠「全体歌手 + 长度」认的，日志里标出来。
+                    ...(found.score === MATCH_THRESHOLD && asked.titleBlind ? { by: 'lineup+length' } : {}),
+                });
+                return source;
+            } catch (error) {
+                console.warn('[Fallback] 同曲换址失败，换下一条查询', { platform: platformId, query: asked.text, error });
             }
-            const source = await xinghai.playback.getAudioSource(found.song, quality);
-            if (!source?.url || source.preview) continue;
-            const expectedMs = found.song.durationMs > 0 ? found.song.durationMs : song.durationMs;
-            if (await isClipAudio(source.url, expectedMs, { priority: true })) continue;
-            console.info('[Fallback] 改由同曲换址', {
-                song: song.name,
-                via: platformId,
-                matched: found.song.name,
-                score: found.score,
-            });
-            return source;
-        } catch (error) {
-            console.warn('[Fallback] 同曲换址失败，换下一个平台', { platform: platformId, error });
         }
     }
     return null;
@@ -364,6 +384,46 @@ const ARCHIVE_DURATION_TOLERANCE_MS = 15_000;
 
 /** 存档站里带这些字样的条目是剪辑/试听/预告，长度对不上，直接不要。 */
 const CLIP_TITLE = /片段|试听|試聽|抢先|30\s*秒|一分钟|一分钟试听/i;
+
+/**
+ * 「标题对不上，但就是这一首」的容差：长度差多少以内算同一个录音。
+ *
+ * 2 秒是实测出来的：Spotify 报 291 s 的《不该》，酷狗那条原版也是 291 s；同名不同录音
+ * （Live / 伴奏 / 剪辑）差得远不止 2 秒。
+ */
+const LINEUP_TOLERANCE_MS = 2_000;
+
+/**
+ * 平台之间**标题语言不一致**时，靠「全体歌手 + 长度」认这一首。
+ *
+ * 2026-11-14 实测的那一首：Spotify 把《不该》写成 `Shouldn't Be`（专辑名也是英文
+ * `Jay Chou's Bedtime Stories`），于是：
+ *   - 用「Shouldn't Be 周杰伦 张惠妹」搜酷狗，召回的是《发如雪》《晴天》《青花瓷》，
+ *     原版根本不在结果里；
+ *   - 用「周杰伦 张惠妹」搜，第一条就是《不该》/ 291 s，与 Spotify 报的 291 s 完全一致。
+ * 标题判据在这种情况下永远给 0 分，换源必然失败——而它并不是「曲库没有」。
+ *
+ * 门槛（三条同时满足，缺一不可）：
+ *   1. 这首歌**至少两位**艺人，且候选里每一位都在——两位都对上，基本不可能是别的歌；
+ *   2. 长度差不超过 2 秒；
+ *   3. 候选标题不带版本词（Live / 伴奏 / 翻唱 / DJ…），这条由调用方先用
+ *      `isDifferentVersion` 挡过一遍。
+ * 单歌手的歌不走这条路：一个歌手 + 一个长度，证据不足以换一首别的歌上去。
+ */
+const sameLineup = (song: SongResult, candidate: SongResult): boolean => {
+    const wanted = artistNamesOf(song);
+    if (wanted.length < 2) return false;
+    const found = artistNamesOf(candidate);
+    if (found.length === 0) return false;
+    return wanted.every(name => found.some(other => other.includes(name) || name.includes(other)));
+};
+
+/** 加上长度这一条。搜索页给出的候选带时长，存档站的没有，所以两个入口各用各的。 */
+const sameLineupAndLength = (song: SongResult, candidate: SongResult): boolean => {
+    if (!sameLineup(song, candidate)) return false;
+    if (!(song.durationMs > 0 && candidate.durationMs > 0)) return false;
+    return Math.abs(song.durationMs - candidate.durationMs) <= LINEUP_TOLERANCE_MS;
+};
 
 /** 只给比较用：`scoreSongMatch` 读歌名、歌手、时长三样，别的一概不看。 */
 const asCandidate = (hit: WebArchiveHit): SongResult => ({
@@ -392,56 +452,74 @@ const lookupArchive = async (song: SongResult, quality: AudioQualityPreference):
     const query = [subject.name, artist].filter(Boolean).join(' ').trim();
     if (!query) return null;
 
-    const hits = await searchWebArchive(query);
-    if (hits.length === 0) {
-        console.info('[Fallback] 存档站没有搜到', { song: song.name, query });
-        return null;
-    }
+    // 与跨平台那一步同理：标题搜不到时再只搜歌手（平台可能把中文曲名写成英文）。
+    const queries = artist && artist !== query
+        ? [{ text: query, titleBlind: false }, { text: artist, titleBlind: true }]
+        : [{ text: query, titleBlind: false }];
 
-    let bestScore = 0;
-    const ranked: { hit: WebArchiveHit; score: number }[] = [];
-    for (const hit of hits) {
-        // 搜索页里常混着同名剪辑：「为你写的歌 (30秒片段)」归一化后和原版一模一样，得按原文挡。
-        if (CLIP_TITLE.test(hit.title)) continue;
-        if (isDifferentVersion(subject.name, hit.title)) continue;
-        const score = scoreSongMatch(subject, asCandidate(hit));
-        if (score > bestScore) bestScore = score;
-        if (score >= MATCH_THRESHOLD) ranked.push({ hit, score });
-    }
-    if (ranked.length === 0) {
-        console.info('[Fallback] 存档站里没有足够像的一首', { song: song.name, query, bestScore });
-        return null;
-    }
-    ranked.sort((a, b) => b.score - a.score);
+    // 每次取址是两三个请求，所以整个函数最多试两条候选，而不是每条查询各试两条。
+    let tried = 0;
 
-    // 只试前两条：每条要两次请求，再多也不会有新结果，只会拖长「放不出来」的等待。
-    for (const { hit, score } of ranked.slice(0, 2)) {
-        const source = await fetchWebArchiveAudio(hit.id);
-        if (!source?.url) continue;
-        const expectedMs = song.durationMs > 0 ? song.durationMs : 0;
-        const measured = await probeAudioDurationMs(source.url, undefined, { priority: true });
-        if (measured !== null) {
-            if (looksLikeClip(measured, expectedMs)) {
-                console.info('[Fallback] 存档站给的是一段', { song: hit.title, measured, expectedMs });
-                continue;
-            }
-            if (expectedMs > 0 && Math.abs(measured - expectedMs) > ARCHIVE_DURATION_TOLERANCE_MS) {
-                console.info('[Fallback] 存档站给的是别的录音', { song: hit.title, measured, expectedMs });
-                continue;
-            }
-        } else if (await isClipAudio(source.url, expectedMs, { priority: true })) {
+    for (const asked of queries) {
+        if (tried >= 2) break;
+        const hits = await searchWebArchive(asked.text);
+        if (hits.length === 0) {
+            console.info('[Fallback] 存档站没有搜到', { song: song.name, query: asked.text });
             continue;
         }
-        console.info('[Fallback] 改由存档站提供', {
-            song: song.name,
-            matched: hit.title,
-            artist: hit.artist,
-            score,
-            measured,
-        });
-        return source;
+
+        let bestScore = 0;
+        const ranked: { hit: WebArchiveHit; score: number; blind: boolean }[] = [];
+        for (const hit of hits) {
+            // 搜索页里常混着同名剪辑：「为你写的歌 (30秒片段)」归一化后和原版一模一样，得按原文挡。
+            if (CLIP_TITLE.test(hit.title)) continue;
+            if (isDifferentVersion(subject.name, hit.title)) continue;
+            let score = scoreSongMatch(subject, asCandidate(hit));
+            // 只搜歌手时，允许靠「全体歌手」认——标题语言不一致时这是唯一的线索。存档站的搜索页
+            // 不给时长，所以「长度」这一条只能等量出来再判，容差同时收紧到 2 秒。
+            const blind = score < MATCH_THRESHOLD && asked.titleBlind && sameLineup(subject, asCandidate(hit));
+            if (blind) score = MATCH_THRESHOLD;
+            if (score > bestScore) bestScore = score;
+            if (score >= MATCH_THRESHOLD) ranked.push({ hit, score, blind });
+        }
+        if (ranked.length === 0) {
+            console.info('[Fallback] 存档站里没有足够像的一首', { song: song.name, query: asked.text, bestScore });
+            continue;
+        }
+        ranked.sort((a, b) => b.score - a.score);
+
+        for (const { hit, score, blind } of ranked) {
+            if (tried >= 2) break;
+            tried += 1;
+            const source = await fetchWebArchiveAudio(hit.id);
+            if (!source?.url) continue;
+            const expectedMs = song.durationMs > 0 ? song.durationMs : 0;
+            // 靠阵容认的，长度必须严丝合缝：那条记录的标题本来就对不上，唯一的证据是「同两位艺人 + 同长度」。
+            const tolerance = blind ? LINEUP_TOLERANCE_MS : ARCHIVE_DURATION_TOLERANCE_MS;
+            const measured = await probeAudioDurationMs(source.url, undefined, { priority: true });
+            if (measured !== null) {
+                if (looksLikeClip(measured, expectedMs)) {
+                    console.info('[Fallback] 存档站给的是一段', { song: hit.title, measured, expectedMs });
+                    continue;
+                }
+                if (expectedMs > 0 && Math.abs(measured - expectedMs) > tolerance) {
+                    console.info('[Fallback] 存档站给的是别的录音', { song: hit.title, measured, expectedMs, tolerance });
+                    continue;
+                }
+            } else if (await isClipAudio(source.url, expectedMs, { priority: true })) {
+                continue;
+            }
+            console.info('[Fallback] 改由存档站提供', {
+                song: song.name,
+                matched: hit.title,
+                artist: hit.artist,
+                score,
+                measured,
+            });
+            return source;
+        }
     }
-    console.info('[Fallback] 存档站的候选都不合格', { song: song.name, query, tried: Math.min(ranked.length, 2) });
+    console.info('[Fallback] 存档站的候选都不合格', { song: song.name, tried });
     return null;
 };
 
