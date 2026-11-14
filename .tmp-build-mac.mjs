@@ -1,0 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { build, Platform, Arch } from 'electron-builder';
+const ROOT = '/Users/lyh/Downloads/folia-major';
+const pkg = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'));
+const config = structuredClone(pkg.build);
+config.electronDist = '/tmp/electron-arm64.zip';
+config.publish = null;
+config.mac.target = ['dir'];
+config.mac.icon = 'build/icon.icns';
+await build({ targets: Platform.MAC.createTarget(['dir'], Arch.arm64), config, publish: 'never' });
+console.log('[build-mac] done');
