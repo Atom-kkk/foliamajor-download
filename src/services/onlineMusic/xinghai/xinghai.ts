@@ -18,17 +18,25 @@ import { OnlineProviderError } from '../../../types/onlineMusic';
 
 export const XINGHAI_SOURCE_ID: OnlineProviderId = 'xinghai';
 
-/** 后端认识的平台缩写。酷我（kw）故意不在内：内置的直连源已经覆盖它。 */
-export type XinghaiPlatform = 'wy' | 'tx' | 'kg' | 'mg' | 'qs';
+/** 后端认识的平台缩写。 */
+export type XinghaiPlatform = 'wy' | 'tx' | 'kg' | 'mg' | 'qs' | 'kw';
 
 /**
- * Folia 的 provider 到星海的平台缩写。只列 mediaId 能直接当后端 id 用的两个：一个的 mediaId
- * 就是它的数字 id，另一个的 mediaId 就是 songmid。第三个平台的 mediaId 是 hash，而后端要的是
- * 数字 id + hash 两样，对不上就宁可不接。
+ * Folia 的 provider 到星海的平台缩写。
+ *
+ * 2026-11-14 实测（本机直连后端）：`wy` 数字 id、`kg` 酷狗 hash、`kw` 酷我都返回 200 与
+ * 完整文件（kg 10.3 MB / kw 4.1 MB，`audio/mpeg`）；`tx` 返回
+ * `{"code":403,"msg":"该音源仅对认证用户开放…"}`，`mg` 返回 502 取流失败——这两个仍然列出，
+ * 后端恢复就能用，取不到时 `resolveLockedSongAudio` 会跳过它换下一个候选。
+ *
+ * 酷狗加进来是最有价值的一条：酷狗的曲库比网易云、酷我都全（周杰伦这类在另两家没有原版的
+ * 歌，酷狗有），而它的 mediaId 正是后端要的 hash。
  */
 const PLATFORM_BY_PROVIDER: Partial<Record<OnlineProviderId, XinghaiPlatform>> = {
     netease: 'wy',
     qq: 'tx',
+    kugou: 'kg',
+    kuwo: 'kw',
 };
 
 const bridge = () => (typeof window === 'undefined' ? undefined : window.electron);

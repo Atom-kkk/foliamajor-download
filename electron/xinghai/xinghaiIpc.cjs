@@ -26,7 +26,7 @@ const HOSTS = ['yy.zddyr.top', 'zrcdy.dpdns.org'];
 const API_PATH = '/lx/api/';
 
 /** 后端认识的平台缩写。酷我（kw）不在内：那个平台由内置的直连源负责，不重复。 */
-const SOURCES = new Set(['wy', 'tx', 'kg', 'mg', 'qs']);
+const SOURCES = new Set(['wy', 'tx', 'kg', 'mg', 'qs', 'kw']);
 
 /** 参数白名单：名字与顺序都固定，值截断，避免被当成任意转发。 */
 const PARAM_KEYS = ['source', 'name', 'singer', 'songmid', 'hash', 'albumId', 'interval', 'albumName', 'quality'];

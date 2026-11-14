@@ -277,35 +277,26 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
 };
 
 /**
- * 跨平台兜底：本平台、星海、酷我都拿不到时，去网易云找同一首，再用星海换它的地址。
+ * 跨平台兜底：本平台、星海、酷我都拿不到时，去**别的平台**找同一首，再用星海换它的地址。
  *
  * 为什么需要这一步（2026-11-14 实测）：
- *   - 星海对 **QQ 源（tx）** 已经要认证：`{"code":403,"msg":"该音源仅对认证用户开放：请使用卡密、星海 App 或网页端访问"}`；
- *   - 酷我的曲库常常没有某些歌的原版（「偏爱 / 张芸京」搜出来 20 条全是 Live / cover / 改编，
- *     被版本判据正确排除），于是 QQ 的会员歌在本平台和两个候选上都拿不到；
- *   - 但同一首在网易云有，而星海对 **网易源（wy）** 仍然免费（同一首返回 8.5 MB 完整 mp3）。
- * 所以最后一步是「网易云搜同曲 → 星海 wy 换址」。质量门槛与别的候选一样：版本排除 + 85 分 +
- * 实测不是片段，绝不拿别的录音顶上去。
+ *   - 星海对 **QQ 源（tx）** 已经要认证：`{"code":403,"msg":"该音源仅对认证用户开放…"}`；
+ *   - 酷我的曲库常常没有某些歌的原版（「偏爱 / 张芸京」20 条全是 Live / cover / 改编）；
+ *   - 但同一首常在别家：网易云（星海 wy 免费）或酷狗（星海 kg 免费，且曲库最全——
+ *     周杰伦《说好的幸福呢》网易云只有翻唱、酷狗有原版，换上来的文件 10.27 MB）。
+ *
+ * 所以最后按顺序试这两个平台：各自搜同曲 → 星海换址 → 实测不是片段。质量门槛与别的候选
+ * 一样：版本排除 + 85 分 + 不是片段，绝不拿别的录音顶上去。歌本来就来自某一家时跳过那一家
+ * （前面的星海候选已经换过一次）。
  */
-const bridgeThroughNetease = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
-    const ref = getPlaybackSourceRef(song);
-    // 本来就是网易云的歌：上面的星海候选已经换过一次，不必再搜。
-    if (ref.kind === 'online' && ref.providerId === 'netease') return null;
-    const netease = getOnlineMusicProvider('netease');
-    const xinghai = getOnlineMusicProvider(XINGHAI_SOURCE_ID);
-    if (!netease?.search?.searchSongs || !xinghai?.playback?.getAudioSource) return null;
+const CROSS_PLATFORMS = ['netease', 'kugou'] as const;
 
-    // 搜索与比较都用简体视图：Spotify 给的是繁体曲目名（「說好的幸福呢」），网易云存的是简体。
-    const subject = await simplifiedSubject(song);
-    const artist = (subject.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
-    const query = [subject.name, artist].filter(Boolean).join(' ').trim();
-    if (!query) return null;
-
-    const page = await netease.search.searchSongs(query, 15, 0);
+/** 在某个平台的搜索结果里挑最像的一条；没有就像素返回 null。 */
+const bestCandidate = (subject: SongResult, items: readonly UnifiedSong[], platformId: OnlineProviderId): { song: UnifiedSong; score: number } | null => {
     let best: UnifiedSong | null = null;
     let bestScore = 0;
-    for (const candidate of page.items) {
-        if (candidate.sourceRef.kind !== 'online' || candidate.sourceRef.providerId !== 'netease') continue;
+    for (const candidate of items) {
+        if (candidate.sourceRef.kind !== 'online' || candidate.sourceRef.providerId !== platformId) continue;
         if (isDifferentVersion(subject.name, candidate.name)) continue;
         const score = scoreSongMatch(subject, candidate);
         if (score > bestScore) {
@@ -313,21 +304,49 @@ const bridgeThroughNetease = async (song: SongResult, quality: AudioQualityPrefe
             bestScore = score;
         }
     }
-    if (!best || bestScore < MATCH_THRESHOLD) {
-        console.info('[Fallback] 网易云里也没有足够像的一首', { song: song.name, query, bestScore });
-        return null;
-    }
+    return best && bestScore >= MATCH_THRESHOLD ? { song: best, score: bestScore } : null;
+};
 
-    const source = await xinghai.playback.getAudioSource(best, quality);
-    if (!source?.url || source.preview) return null;
-    const expectedMs = best.durationMs > 0 ? best.durationMs : song.durationMs;
-    if (await isClipAudio(source.url, expectedMs, { priority: true })) return null;
-    console.info('[Fallback] 改由网易云同曲 + 星海换址', {
-        song: song.name,
-        matched: best.name,
-        score: bestScore,
-    });
-    return source;
+const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
+    const origin = getPlaybackSourceRef(song);
+    const xinghai = getOnlineMusicProvider(XINGHAI_SOURCE_ID);
+    if (!xinghai?.playback?.getAudioSource) return null;
+
+    // 搜索与比较都用简体视图：Spotify 给的是繁体曲目名（「說好的幸福呢」），曲库存的是简体。
+    const subject = await simplifiedSubject(song);
+    const artist = (subject.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
+    const query = [subject.name, artist].filter(Boolean).join(' ').trim();
+    if (!query) return null;
+
+    for (const platformId of CROSS_PLATFORMS) {
+        // 歌本来就来自这一家：前面的星海候选已经按它自己的 id 换过一次，不必再搜。
+        if (origin.kind === 'online' && origin.providerId === platformId) continue;
+        const provider = getOnlineMusicProvider(platformId);
+        if (!provider?.search?.searchSongs) continue;
+        if (provider.getAvailability && !provider.getAvailability().configured) continue;
+        try {
+            const page = await provider.search.searchSongs(query, 15, 0);
+            const found = bestCandidate(subject, page.items, platformId);
+            if (!found) {
+                console.info('[Fallback] 这个平台里没有足够像的一首', { song: song.name, query, platform: platformId });
+                continue;
+            }
+            const source = await xinghai.playback.getAudioSource(found.song, quality);
+            if (!source?.url || source.preview) continue;
+            const expectedMs = found.song.durationMs > 0 ? found.song.durationMs : song.durationMs;
+            if (await isClipAudio(source.url, expectedMs, { priority: true })) continue;
+            console.info('[Fallback] 改由同曲换址', {
+                song: song.name,
+                via: platformId,
+                matched: found.song.name,
+                score: found.score,
+            });
+            return source;
+        } catch (error) {
+            console.warn('[Fallback] 同曲换址失败，换下一个平台', { platform: platformId, error });
+        }
+    }
+    return null;
 };
 
 /**
@@ -387,10 +406,10 @@ export const resolveLockedSongAudio = async (
         // 最后一步：别的平台的原版常常拿不到（星海对 QQ 源要认证、酷我可能没有原版），
         // 但同一首在网易云有、而星海换网易云的地址是免费的。
         try {
-            const crossed = await bridgeThroughNetease(song, quality);
+            const crossed = await bridgeThroughOtherPlatform(song, quality);
             if (crossed) return crossed;
         } catch (error) {
-            console.warn('[Fallback] 网易云同曲换址失败，保持内置源行为', error);
+            console.warn('[Fallback] 跨平台同曲换址失败，保持内置源行为', error);
         }
         return null;
     } catch (error) {

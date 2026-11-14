@@ -827,7 +827,7 @@ declare global {
       kuwoLyric?: (query: { rid: string }) => Promise<{ status: number; text: string }>;
       /** 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：一个 GET 换一个地址，参数由渲染层给。 */
       xinghaiAudioUrl?: (query: {
-        source: 'wy' | 'tx' | 'kg' | 'mg' | 'qs';
+        source: 'wy' | 'tx' | 'kg' | 'mg' | 'qs' | 'kw';
         songmid?: string;
         hash?: string;
         albumId?: string;
