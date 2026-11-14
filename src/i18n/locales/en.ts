@@ -2086,6 +2086,7 @@ export default {
     "browserFullscreen": "Fullscreen",
     "madeBy": "Project:",
     "contactEmail": "Contact email",
+    "forkChanges": "Modified from folia-major: two more sources (Kuwo, XingHai); member songs the platform only previews are re-routed automatically (XingHai, Kuwo, netease / kugou, then a web archive); download the current song; per-line random lyric styles.",
     "upstreamProject": "Original project:",
     "joinCommunity": "Join the community",
     "communityDiscord": "Discord server",
@@ -5522,7 +5523,7 @@ export default {
     "copyPrompt": "Copy prompt",
     "copyPromptTitle": "1. Copy AI Prompt",
     "importJsonTitle": "2. Paste JSON Result",
-    "prompt": "I am using the folia-major music player on GitHub and need help with a problem.\n\nFolia Guide: {{guideUrl}}\nFolia repository: {{repoUrl}}\n\nPlease use these references as context, then help me understand and solve the problem I describe next. If any information is missing, ask what I should provide before making uncertain assumptions."
+    "prompt": "I am using Folia Download, a build modified from the open-source project folia-major, and I need help with a problem.\n\nProject: {{repoUrl}}\n\nHelp me work out what is wrong with this build and give me steps I can try safely. Ask for any missing details before making assumptions."
   },
   "ponder": {
     "openPage": "Ponder this page",

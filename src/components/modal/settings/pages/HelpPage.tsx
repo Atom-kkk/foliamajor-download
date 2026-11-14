@@ -168,9 +168,9 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
                         <CopyButton text={VERSION_INFO} />
                     </span>
                 </Row>
-                {BUILD_KIND !== 'official' && (
-                    <Row sub notice={t(BUILD_KIND === 'unofficial' ? 'options.unofficialBuildNotice' : 'options.selfHostedBuildNotice')} />
-                )}
+                {/* 这一行原来写的是上游那句「不是官方 CI 构建、请去官方 Releases 下载」。对这里的使用者
+                    没用：他们要在意的是「这个版本和原版差在哪」。所以换成一句自己的说明。 */}
+                <Row sub notice={t('help.forkChanges')} />
                 <FoundUpdateRow sub />
                 <ChinaDrivesRow sub quiet />
                 <Row

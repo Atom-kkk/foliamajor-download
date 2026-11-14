@@ -2086,6 +2086,7 @@ export default {
     "browserFullscreen": "Layar penuh",
     "madeBy": "Proyek:",
     "contactEmail": "Email kontak",
+    "forkChanges": "Dimodifikasi dari folia-major: dua sumber tambahan (Kuwo, XingHai); lagu berbayar yang hanya dipratinjau dialihkan otomatis; unduh lagu yang sedang diputar; gaya lirik acak per baris.",
     "upstreamProject": "Proyek asli:",
     "joinCommunity": "Gabung komunitas",
     "communityDiscord": "Server Discord",
@@ -5522,7 +5523,7 @@ export default {
     "copyPrompt": "Salin prompt",
     "copyPromptTitle": "1. Salin Prompt AI",
     "importJsonTitle": "2. Tempel Hasil JSON",
-    "prompt": "Saya menggunakan pemutar musik folia-major di GitHub dan perlu bantuan untuk masalah.\n\nPanduan Folia: {{guideUrl}}\nRepositori Folia: {{repoUrl}}\n\nHarap gunakan referensi ini sebagai konteks, lalu bantu saya memahami dan menyelesaikan masalah yang saya jelaskan berikutnya. Jika ada informasi yang kurang, tanyakan apa yang harus saya berikan sebelum membuat asumsi yang tidak pasti."
+    "prompt": "Saya memakai Folia Download, versi yang dimodifikasi dari proyek sumber terbuka folia-major, dan saya butuh bantuan atas sebuah masalah.\n\nProyek: {{repoUrl}}\n\nBantu saya mencari penyebabnya dan beri langkah yang aman untuk saya coba. Tanyakan dulu bila ada yang kurang, jangan berasumsi."
   },
   "ponder": {
     "openPage": "Ponder halaman ini",

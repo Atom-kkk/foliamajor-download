@@ -2086,6 +2086,7 @@ export default {
     "browserFullscreen": "全屏",
     "madeBy": "项目：",
     "contactEmail": "联系邮箱",
+    "forkChanges": "基于原版 folia-major 修改：新增酷我、星海两个音源；会员歌在本平台只给试听时自动换源（星海 → 酷我 → 网易云 / 酷狗 → 网页存档站）；可把当前歌曲下载到本地；支持按句随机歌词样式。",
     "upstreamProject": "原作者项目：",
     "joinCommunity": "加入社区",
     "communityDiscord": "Discord 社区",
@@ -5522,7 +5523,7 @@ export default {
     "copyPrompt": "复制提示词",
     "copyPromptTitle": "1. 复制 AI 提示词",
     "importJsonTitle": "2. 粘贴并导入 JSON",
-    "prompt": "我正在使用 GitHub 上的 folia-major 音乐播放器，遇到了一个问题，需要你协助排查。\n\nFolia 使用指南：{{guideUrl}}\nFolia 源码仓库：{{repoUrl}}\n\n请把这些资料作为上下文，结合我接下来描述的问题，帮我判断可能原因并给出处理步骤。如果信息不足，请先询问我需要补充什么，不要直接做不确定的假设。"
+    "prompt": "我正在使用 Folia Download（基于开源项目 folia-major 修改的播放器），遇到了一个问题，需要你协助排查。\n\n项目地址：{{repoUrl}}\n\n请结合这个项目的情况，帮我判断可能原因并给出处理步骤。如果信息不足，请先询问我需要补充什么，不要直接做不确定的假设。"
   },
   "ponder": {
     "openPage": "思索当前页面",

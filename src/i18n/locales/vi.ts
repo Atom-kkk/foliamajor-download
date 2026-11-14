@@ -2086,6 +2086,7 @@ export default {
     "browserFullscreen": "Toàn màn hình",
     "madeBy": "Dự án:",
     "contactEmail": "Email liên hệ",
+    "forkChanges": "Sửa từ folia-major: thêm hai nguồn (Kuwo, XingHai); bài trả phí chỉ được nghe thử sẽ tự chuyển nguồn; tải bài đang phát; kiểu lời bài hát ngẫu nhiên từng dòng.",
     "upstreamProject": "Dự án gốc:",
     "joinCommunity": "Tham gia cộng đồng",
     "communityDiscord": "Máy chủ Discord",
@@ -5522,7 +5523,7 @@ export default {
     "copyPrompt": "Sao chép prompt",
     "copyPromptTitle": "1. Sao chép prompt AI",
     "importJsonTitle": "2. Dán kết quả JSON",
-    "prompt": "Tôi đang dùng trình phát nhạc folia-major trên GitHub và gặp sự cố cần hỗ trợ.\n\nHướng dẫn Folia: {{guideUrl}}\nKho mã nguồn Folia: {{repoUrl}}\n\nHãy dùng các tài liệu này làm ngữ cảnh, sau đó giúp tôi hiểu và giải quyết vấn đề được mô tả tiếp theo. Nếu thiếu thông tin, hãy hỏi tôi cần cung cấp thêm gì trước khi đưa ra phỏng đoán không chắc chắn."
+    "prompt": "Tôi đang dùng Folia Download, bản được sửa từ dự án mã nguồn mở folia-major, và tôi cần giúp về một sự cố.\n\nDự án: {{repoUrl}}\n\nGiúp tôi tìm nguyên nhân và các bước có thể thử an toàn. Hỏi lại nếu thiếu thông tin, đừng mặc định."
   },
   "ponder": {
     "openPage": "Khám phá trang này",
