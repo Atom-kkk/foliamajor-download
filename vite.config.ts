@@ -189,7 +189,8 @@ export default async function viteConfig(_config: ConfigEnv): Promise<UserConfig
   // 开发服务器可以用 FOLIA_DEV_BUILD_KIND 钉住（Playwright 用）；vite build 不认这个变量。
   const buildKind = resolveDevBuildKindOverride(_config.command, process.env) ?? resolveBuildKind(process.env);
 
-  const appVersionLabel = process.env.APP_VERSION_LABEL?.trim() || 'Realeco';
+  // 这个 fork 用自己的名字：帮助页那行版本号读作「Folia Download v0.8.x」，不再用上游的代号。
+  const appVersionLabel = process.env.APP_VERSION_LABEL?.trim() || 'Folia Download';
   const appReleaseChannel = process.env.APP_RELEASE_CHANNEL?.trim().toLowerCase() || 'realeco';
   const dockerStackVersion = process.env.DOCKER_STACK_VERSION?.trim() || '';
 

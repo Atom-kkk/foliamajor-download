@@ -14,7 +14,8 @@ import { iconLabel } from './settings/pages/iconLabel';
 
 const FOLIA_GUIDE_URL = 'https://folia-site.cielaniska.top/guide/llm-routing';
 const FOLIA_DOCS_URL = 'https://folia-site.cielaniska.top/guide/';
-const FOLIA_REPOSITORY_URL = 'https://github.com/chthollyphile/folia-major';
+// 这个构建的仓库（fork）。上游地址在帮助页最下面一行。
+const FOLIA_REPOSITORY_URL = 'https://github.com/Atom-kkk/foliamajor-download';
 
 const LINKS: SettingsGroupDef = { id: 'aiHelpLinks', titleKey: 'aiHelp.title' };
 const ASK_AI: SettingsGroupDef = { id: 'aiHelpPrompt', titleKey: 'aiHelp.askAiTitle' };

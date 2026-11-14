@@ -1,11 +1,9 @@
 import React from 'react';
-import { ChevronRight, CircleHelp, ExternalLink, Lightbulb, MessageCircle, Sparkles, Users, type LucideIcon } from 'lucide-react';
+import { ChevronRight, CircleHelp, ExternalLink, Lightbulb, Mail, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { openPonderNavigation } from '../../../../services/ponder/pagePonderTarget';
 import { BUILD_KIND_TAGS, getBuildKind } from '../../../../utils/buildProvenance';
 import { PRIMARY_MODIFIER_LABEL } from '../../../../utils/platform';
-import { openDiscordInvite } from '../../../shared/discordCommunity';
-import { QQ_COMMUNITY_GROUP_NUMBER } from '../../../shared/qqCommunity';
 import { HELP_TAB_PLAYER_CONTROLS, HELP_TAB_PRIMARY_SHORTCUTS } from '../../userGuideContent';
 import { Button, CopyButton, CopyValue, Group, Keys, Row, type SettingsGroupDef } from '../kit';
 import { openOutsideLink } from '../../../../utils/system/outsideLink';
@@ -16,17 +14,27 @@ import { iconLabel } from './iconLabel';
 // src/components/modal/settings/pages/HelpPage.tsx
 // The 帮助 page, reached from the foot of the side list: two entry cards (the release notes, the
 // Ponder tutorials), the keyboard shortcuts and the player's keys side by side, where to get help
-// (the help dialog, the Discord server, the QQ group), and the version with a found update and the
+// (the help dialog, the maintainer's address), and the version with a found update and the
 // project link. A build that is not this repository's own says so under its version. It is not a settings category, so it
 // is not in pages/index.ts and the search does not list it; the settings window mounts it itself
 // and hands it the two dialogs it opens.
+//
+// This is a fork: the project row points at this build's repository, and the upstream author's
+// project is credited at the foot of the page, one size smaller.
 
-const REPOSITORY_URL = 'https://github.com/chthollyphile/folia-major';
-const REPOSITORY_NAME = 'chthollyphile/folia-major';
+const REPOSITORY_URL = 'https://github.com/Atom-kkk/foliamajor-download';
+const REPOSITORY_NAME = 'Atom-kkk/foliamajor-download';
+/** The maintainer's address, the only way to reach this build's author. */
+const CONTACT_EMAIL = '517298997@qq.com';
+/** Where the code this build started from lives. Credited at the foot, in smaller type. */
+const UPSTREAM_URL = 'https://github.com/chthollyphile/folia-major';
+const UPSTREAM_NAME = 'chthollyphile/folia-major';
 const BUILD_KIND = getBuildKind();
+// 这一行会被贴进问题报告，所以留着提交号；分支名去掉了——那是上游的分支（`update/upstream-0.7.28`），
+// 对看这个数字的人没有意义。
 const VERSION_INFO = (__DOCKER_STACK_VERSION__
     ? `${__APP_VERSION_LABEL__} v${__APP_VERSION__} · Stack ${__DOCKER_STACK_VERSION__} · ${__COMMIT_HASH__}`
-    : `${__APP_VERSION_LABEL__} v${__APP_VERSION__} - ${__GIT_BRANCH__} - ${__COMMIT_HASH__}`)
+    : `${__APP_VERSION_LABEL__} v${__APP_VERSION__} · ${__COMMIT_HASH__}`)
     // Self-hosted and unofficial builds always carry a tag, in English, so a line pasted into an
     // issue says where the build came from.
     + (BUILD_KIND === 'official' ? '' : ` · ${BUILD_KIND_TAGS[BUILD_KIND]}`);
@@ -145,10 +153,10 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
 
             <Group def={SUPPORT} bare>
                 <Row label={iconLabel(CircleHelp, t('aiHelp.openButton'))} onClick={onOpenAiHelp} />
-                <Row label={iconLabel(MessageCircle, t('help.joinDiscord'))} onClick={openDiscordInvite} />
-                {/* A QQ group has no link that opens it: the row gives its number to copy. */}
-                <Row label={iconLabel(Users, t('help.communityQq'))}>
-                    <CopyValue value={QQ_COMMUNITY_GROUP_NUMBER} />
+                {/* An address has no link that opens it here: the row gives it to copy, like the
+                    version line below does. */}
+                <Row label={iconLabel(Mail, t('help.contactEmail'))}>
+                    <CopyValue value={CONTACT_EMAIL} />
                 </Row>
             </Group>
 
@@ -177,6 +185,19 @@ const HelpPage: React.FC<HelpPageProps> = ({ onOpenReleaseNotes, onOpenAiHelp, o
                     </Button>
                 </Row>
             </Group>
+
+            {/* The upstream author's project, at the foot and one size smaller: this build is a fork,
+                and where it came from belongs on the page, just not on the same line as its own. */}
+            <div className="mt-3 px-4 pb-1 text-[11px] leading-4 text-[color:var(--st-t3)]">
+                {t('help.upstreamProject')}
+                <button
+                    type="button"
+                    onClick={() => openOutsideLink(UPSTREAM_URL)}
+                    className="st-t-fast ml-1 underline decoration-dotted underline-offset-2 hover:text-[color:var(--st-t1)]"
+                >
+                    {UPSTREAM_NAME}
+                </button>
+            </div>
         </>
     );
 };

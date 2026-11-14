@@ -2085,6 +2085,8 @@ export default {
     "openCommandPaletteQueue": "Mở hàng đợi trong bảng lệnh",
     "browserFullscreen": "Toàn màn hình",
     "madeBy": "Dự án:",
+    "contactEmail": "Email liên hệ",
+    "upstreamProject": "Dự án gốc:",
     "joinCommunity": "Tham gia cộng đồng",
     "communityDiscord": "Máy chủ Discord",
     "communityDiscordHint": "Mở liên kết mời",

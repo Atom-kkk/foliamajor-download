@@ -2085,6 +2085,8 @@ export default {
     "openCommandPaletteQueue": "Open queue in command palette",
     "browserFullscreen": "Fullscreen",
     "madeBy": "Project:",
+    "contactEmail": "Contact email",
+    "upstreamProject": "Original project:",
     "joinCommunity": "Join the community",
     "communityDiscord": "Discord server",
     "communityDiscordHint": "Open the invite link",

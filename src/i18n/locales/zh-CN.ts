@@ -2085,6 +2085,8 @@ export default {
     "openCommandPaletteQueue": "直接打开命令面板队列",
     "browserFullscreen": "全屏",
     "madeBy": "项目：",
+    "contactEmail": "联系邮箱",
+    "upstreamProject": "原作者项目：",
     "joinCommunity": "加入社区",
     "communityDiscord": "Discord 社区",
     "communityDiscordHint": "打开邀请链接",
