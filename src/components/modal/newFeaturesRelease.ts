@@ -1,4 +1,4 @@
-import { AppWindow, Clapperboard, Palette, Shapes, Sparkles } from 'lucide-react';
+import { Download, Globe, Palette, Radio, RefreshCw } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // src/components/modal/newFeaturesRelease.ts
@@ -17,14 +17,15 @@ type NewFeaturesRelease = {
 };
 
 // Defines the current release's cards; their localized text lives under i18nKey in every locale.
+// 这一版只讲功能：多出来的音源、放不出来的歌怎么换、下载、逐句歌词。
+// 卡片顺序就是读者会遇到的顺序：先有源，才有「这个源放不出来怎么办」。
 export const NEW_FEATURES_RELEASE: NewFeaturesRelease = {
-    i18nKey: 'releaseNotes.v0_7_28',
-    majorUpdate: { codename: 'Mimiambol' },
+    i18nKey: 'releaseNotes.v0_8_11',
     features: [
-        { id: 'scenes', icon: Clapperboard },
-        { id: 'newLook', icon: Shapes },
-        { id: 'windowControls', icon: AppWindow },
-        { id: 'styleOptions', icon: Palette },
-        { id: 'moreDetails', icon: Sparkles },
+        { id: 'sources', icon: Radio },
+        { id: 'fallback', icon: RefreshCw },
+        { id: 'crossPlatform', icon: Globe },
+        { id: 'download', icon: Download },
+        { id: 'lyricStyles', icon: Palette },
     ],
 };

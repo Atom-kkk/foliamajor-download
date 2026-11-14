@@ -4167,6 +4167,29 @@ export default {
         "description": "Sau khi đăng nhập, danh sách phát riêng tư của bạn nay có thể tải bài hát với phân trang thực tế. Máy chủ tự lưu trữ cần chạy qq-music-api 3.1.2 trở lên; phiên bản cũ hơn sẽ tự động quay về cơ chế dự phòng, và danh sách phát không đọc được sẽ báo rõ là danh sách không công khai thay vì hiển thị trống."
       }
     },
+    "v0_8_11": {
+      "intro": "Bản này hoàn thiện đường đi cho những bài không phát được: thêm hai nguồn, bài trả phí tự chuyển nguồn khi nền tảng chỉ cho nghe thử, và lưu bài đang phát xuống máy.",
+      "sources": {
+        "title": "Thêm hai nguồn: Kuwo và XingHai",
+        "description": "Kuwo lấy địa chỉ từ kết quả tìm kiếm của chính nó. XingHai đổi địa chỉ theo id của nền tảng và phủ netease, kugou, kuwo, QQ; kho của kugou rộng nhất trong ba nơi."
+      },
+      "fallback": {
+        "title": "Bài trả phí tự chuyển nguồn",
+        "description": "Khi nền tảng chỉ cho nghe thử hoặc không có địa chỉ, thử XingHai theo id, rồi Kuwo theo tên bài. Kết quả phải là bài đầy đủ: không phải bản karaoke, live hay cover, tên bài và ca sĩ khớp, và độ dài đo được không phải một đoạn. Nếu không, chỉ hiện thông báo nghe thử."
+      },
+      "crossPlatform": {
+        "title": "Tìm bài hát ở nơi khác",
+        "description": "Khi cả ba kho đều không có, tìm trên netease và kugou rồi đổi địa chỉ. Nếu tên bài viết bằng ngôn ngữ khác hoặc dùng chữ biến thể, dùng cách đối chiếu toàn bộ ca sĩ cùng độ dài trùng khớp, cuối cùng là một trang lưu trữ."
+      },
+      "download": {
+        "title": "Tải bài đang phát",
+        "description": "Hai lệnh mới trong bảng lệnh: tải bài hiện tại, và xóa âm thanh đã lưu rồi tải lại. Bản tải dùng đúng địa chỉ trình phát đang dùng và chỉ nhận bài đầy đủ."
+      },
+      "lyricStyles": {
+        "title": "Kiểu lời bài hát ngẫu nhiên từng dòng",
+        "description": "Trong cài đặt giao diện: ngẫu nhiên theo bài, hoặc đổi kiểu sau vài dòng."
+      }
+    },
     "v0_7_28": {
       "intro": "Chào mừng bạn đến với 0.7.28, Mimiambol Update—một bản cập nhật lớn. Phiên bản này thêm cảnh rạp chiếu phim, biểu tượng ứng dụng mới, nút cửa sổ đặt được bên trái hoặc phải, và tùy chọn mới cho một số kiểu lời bài hát.",
       "scenes": {

@@ -4167,6 +4167,29 @@ export default {
         "description": "Setelah masuk, playlist pribadi buatan Anda kini dapat memuat lagu dengan paging sungguhan. Backend yang di-host sendiri harus memakai qq-music-api 3.1.2 atau lebih baru; backend lama beralih otomatis, dan playlist yang tidak dapat dibaca kini menjelaskan bahwa playlist itu tidak publik, alih-alih tampil kosong tanpa keterangan."
       }
     },
+    "v0_8_11": {
+      "intro": "Versi ini melengkapi jalur untuk lagu yang tidak mau diputar: dua sumber tambahan, lagu berbayar dialihkan otomatis saat platform hanya memberi pratayang, dan lagu yang sedang diputar bisa disimpan ke disk.",
+      "sources": {
+        "title": "Dua sumber tambahan: Kuwo dan XingHai",
+        "description": "Kuwo mengambil alamat dari hasil pencariannya sendiri. XingHai menukar alamat lewat id platform dan mencakup netease, kugou, kuwo, QQ; katalog kugou paling lengkap di antara ketiganya."
+      },
+      "fallback": {
+        "title": "Lagu berbayar dialihkan otomatis",
+        "description": "Saat platform hanya memberi pratayang atau tanpa alamat, dicoba XingHai lewat id, lalu Kuwo lewat judul. Hasilnya harus lagu utuh: tanpa versi karaoke, live, atau daur ulang, judul dan penyanyi cocok, dan durasinya bukan potongan. Kalau tidak, yang tampil hanya pemberitahuan pratayang."
+      },
+      "crossPlatform": {
+        "title": "Mencari lagu yang sama di tempat lain",
+        "description": "Bila ketiga katalog tidak punya, dicari di netease dan kugou lalu alamatnya ditukar. Kalau judulnya ditulis dalam bahasa lain atau memakai huruf varian, dipakai patokan daftar penyanyi lengkap plus durasi yang sama, dan situs arsip sebagai jalan terakhir."
+      },
+      "download": {
+        "title": "Unduh lagu yang sedang diputar",
+        "description": "Dua perintah baru di palet: unduh lagu saat ini, dan hapus audio tersimpan lalu muat ulang. Unduhan memakai alamat yang sedang dipakai pemutar dan hanya menerima lagu utuh."
+      },
+      "lyricStyles": {
+        "title": "Gaya lirik acak per baris",
+        "description": "Di pengaturan tampilan: acak per lagu, atau ganti gaya setiap beberapa baris."
+      }
+    },
     "v0_7_28": {
       "intro": "Selamat datang di 0.7.28, Mimiambol Update—sebuah pembaruan besar. Versi ini menghadirkan adegan bioskop, ikon aplikasi baru, tombol jendela di kiri atau kanan, dan opsi baru untuk beberapa gaya lirik.",
       "scenes": {

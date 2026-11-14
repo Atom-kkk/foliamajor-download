@@ -4167,6 +4167,29 @@ export default {
         "description": "When signed in, your own private playlists now load their songs, with real paging. Self-hosted backends must run qq-music-api 3.1.2 or later; older backends fall back automatically, and a playlist that cannot be read now says it is not public instead of silently showing as empty."
       }
     },
+    "v0_8_11": {
+      "intro": "This version completes the path for songs that will not play: two more sources, member songs re-routed automatically when the platform only offers a preview, and the current song saved to disk in one step.",
+      "sources": {
+        "title": "Two more sources: Kuwo and XingHai",
+        "description": "Kuwo resolves from its own search. XingHai swaps an address by the platform's own id and covers netease, kugou, kuwo and QQ; kugou's catalogue is the widest of the three, which is how tracks like Jay Chou's get through."
+      },
+      "fallback": {
+        "title": "Member songs re-route by themselves",
+        "description": "When the platform only offers a preview or no address, it tries XingHai by id, then Kuwo by title. What comes back must be the whole song: no accompaniment, live or cover versions, matching title and artist, and a measured length that is not a clip. Only then does it play; otherwise the notice says preview."
+      },
+      "crossPlatform": {
+        "title": "The same song, found elsewhere",
+        "description": "When none of the three catalogues has it, it searches netease and kugou and swaps that address in. If the platform titles a song in another language (Spotify calls 《不该》 Shouldn't Be) or with a variant character, it falls back on the full line-up plus a matching length, and an archive site after that."
+      },
+      "download": {
+        "title": "Download the current song",
+        "description": "Two new commands in the palette: download the current song, and clear its cached audio and reload. The download uses the address the player is already using, and only takes the whole song."
+      },
+      "lyricStyles": {
+        "title": "Random lyric styles, line by line",
+        "description": "In the appearance settings: randomise per song, or switch style every few lines. Keeps a long session from looking the same."
+      }
+    },
     "v0_7_28": {
       "intro": "Welcome to 0.7.28, the Mimiambol Update—a major update. It adds the cinema hall scene, a new app icon, window controls on either side, and new options for several lyric styles.",
       "scenes": {
