@@ -838,6 +838,12 @@ declare global {
         quality?: string;
       }) => Promise<{ status: number; text: string }>;
       /**
+       * 网页存档站（electron/webArchive/webArchiveIpc.cjs）：搜索页 HTML 与取址都由主进程读，
+       * 渲染层只给关键词或站内的数字 id。
+       */
+      webArchiveSearch?: (payload: { keyword: string }) => Promise<{ id: string; title: string; artist: string }[]>;
+      webArchiveUrl?: (payload: { id: string }) => Promise<string>;
+      /**
        * 下载一条音频到用户选的位置（electron/downloads/audioDownload.cjs）。主进程弹保存框并流式写盘；
        * 页面给不了路径，只给地址与建议文件名。
        */

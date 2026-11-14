@@ -95,6 +95,9 @@ contextBridge.exposeInMainWorld('electron', {
     kuwoLyric: (query) => ipcRenderer.invoke('kuwo-lyric', query),
     // 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认两个自定义头，预检不通，只能从主进程走。
     xinghaiAudioUrl: (query) => ipcRenderer.invoke('xinghai-url', query),
+    // 网页存档站（electron/webArchive/webArchiveIpc.cjs）：抓取与 HTML 解析都在主进程，页面只给参数。
+    webArchiveSearch: (payload) => ipcRenderer.invoke('web-archive-search', payload),
+    webArchiveUrl: (payload) => ipcRenderer.invoke('web-archive-url', payload),
     // 下载：主进程弹保存框、流式写盘，页面只交地址与建议文件名。
     downloadAudio: (payload) => ipcRenderer.invoke('download-audio', payload),
     // 下载已缓存的那一首：直接复制播放器用的文件，`fromCache: false` 表示没缓存、请回落到地址下载。

@@ -5058,6 +5058,7 @@ const { createQqBackend } = require('./qq/qqBackend.cjs');
 const { registerLoginBackendIpc } = require('./loginBackendIpc.cjs');
 const { registerKuwoIpc } = require('./kuwo/kuwoIpc.cjs');
 const { registerXinghaiIpc } = require('./xinghai/xinghaiIpc.cjs');
+const { registerWebArchiveIpc } = require('./webArchive/webArchiveIpc.cjs');
 const { registerAudioDownloadIpc } = require('./downloads/audioDownload.cjs');
 const { registerAudioSizeProbeIpc } = require('./audioSizeProbe.cjs');
 
@@ -7433,6 +7434,13 @@ registerKuwoIpc({
 // 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认 X-Token / X-Client，OPTIONS 预检回 405，
 // 渲染层带自定义头的请求会被浏览器层拦掉。一条通道，只收参数。
 registerXinghaiIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
+});
+
+// 网页存档站（electron/webArchive/webArchiveIpc.cjs）：三家曲库都没有的歌，最后到它这里找。
+// 抓取与解析都在主进程（跨域 HTML 渲染层取不到），两条通道，只收关键词与数字 id。
+registerWebArchiveIpc({
   ipcMain,
   isTrusted: webContents => isTrustedMainWindowContents(webContents),
 });

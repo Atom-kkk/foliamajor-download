@@ -136,6 +136,8 @@ export const IPC_CHANNELS = {
     'wallpaper-display-set': { level: 'first-party', why: '现状：有来源校验' },
     'wallpaper-displays-get': { level: 'first-party', why: '现状：有来源校验' },
     'wallpaper-hit-regions': { level: 'first-party', why: '只收主窗口的（内联校验）' },
+    'web-archive-search': { level: 'first-party', why: '读网页存档站的搜索页（firstParty；域名与路径写死在主进程，只收一个关键词）' },
+    'web-archive-url': { level: 'first-party', why: '读网页存档站详情页并换址（firstParty；只收数字 id，返回 http(s) 音频地址）' },
     'window-close': { level: 'first-party', why: '关主窗口（firstParty）' },
     'window-get-always-on-top': { level: 'first-party', why: '现状：有来源校验' },
     'window-get-click-through': { level: 'first-party', why: '现状：有来源校验' },

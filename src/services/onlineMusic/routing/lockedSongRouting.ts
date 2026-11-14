@@ -4,8 +4,9 @@ import { getOnlineMusicProvider, getOnlineMusicProviderForSong, providerSupports
 import { getPlaybackSongKey, getPlaybackSourceRef } from '../../../utils/appPlaybackGuards';
 import { isLockedSongRoutingEnabled, lockedSongFallbackProviderId } from '../custom/customSourceConfig';
 import { XINGHAI_SOURCE_ID } from '../xinghai/xinghai';
-import { isClipAudio } from '../audioProbe';
+import { isClipAudio, looksLikeClip, probeAudioDurationMs } from '../audioProbe';
 import { isDifferentVersion } from '../songVersionMatch';
+import { fetchWebArchiveAudio, isWebArchiveAvailable, searchWebArchive, type WebArchiveHit } from './webArchive';
 import { useOnlineProviderAccountStore } from '../../../stores/useOnlineProviderAccountStore';
 
 // src/services/onlineMusic/routing/lockedSongRouting.ts
@@ -43,6 +44,13 @@ type Mapping =
 const mappings = new Map<string, Mapping>();
 
 /**
+ * 存档站「没有这首」记多久。预取与播放会连着问同一首（日志里 `[Prefetch] Failed to get audio
+ * URL` 一次播一排），而每一步存档站查询是两三次 HTML 抓取——不记的话同一首会被抓上好几遍。
+ */
+const ARCHIVE_MISS_TTL_MS = 5 * 60 * 1000;
+const archiveMisses = new Map<string, number>();
+
+/**
  * 清掉「哪一首对哪一首」的记忆。
  *
  * 冷启动那次失败会把结果记成 `missing`（五分钟内直接返回 null）。调用方决定重试时必须先清掉，
@@ -50,6 +58,7 @@ const mappings = new Map<string, Mapping>();
  */
 export const forgetFallbackLookups = (): void => {
     mappings.clear();
+    archiveMisses.clear();
 };
 const inFlight = new Map<string, Promise<UnifiedSong | null>>();
 
@@ -57,6 +66,7 @@ const inFlight = new Map<string, Promise<UnifiedSong | null>>();
 export const forgetLockedSongMappings = (): void => {
     mappings.clear();
     inFlight.clear();
+    archiveMisses.clear();
 };
 
 const normalizeText = (value: string): string => value
@@ -349,6 +359,112 @@ const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualit
     return null;
 };
 
+/** 存档站给的时长与这首歌差多少还认。平台之间报的长度常有 1~3 秒差，这里留得宽一些。 */
+const ARCHIVE_DURATION_TOLERANCE_MS = 15_000;
+
+/** 存档站里带这些字样的条目是剪辑/试听/预告，长度对不上，直接不要。 */
+const CLIP_TITLE = /片段|试听|試聽|抢先|30\s*秒|一分钟|一分钟试听/i;
+
+/** 只给比较用：`scoreSongMatch` 读歌名、歌手、时长三样，别的一概不看。 */
+const asCandidate = (hit: WebArchiveHit): SongResult => ({
+    name: hit.title,
+    artists: hit.artist ? [{ id: '', name: hit.artist }] : [],
+    durationMs: 0,
+} as unknown as SongResult);
+
+/**
+ * 最后一步：网页存档站。
+ *
+ * 前面四步都依赖「三家曲库里有这首」这件事。有些歌就是没有——「偏爱 / 张芸京」在酷我搜出 20 条
+ * 全是 Live / cover / 改编，「说好的幸福呢」在网易云前 15 条全是翻唱。存档站的曲库来自用户上传，
+ * 跟平台版权无关，这几首它第一条就是原版（2026-11-14 实测：256.8 s / 213.0 s，完整 mp3）。
+ *
+ * 代价与门槛：
+ *   - 一次搜索 + 一次取址要两三个 HTTP 请求，所以放在**最后**，只有前面全失败才走。
+ *   - 文件是用户上传的，同名不同录音比平台多，所以除了标题/歌手/版本判据，还要**实测时长**：
+ *     与这首歌差超过 15 秒就不要——翻唱、Live、剪辑都过不了这一关。
+ *   - 只给 128 kbps，`quality` 报 `standard`（报高了会被记成降级回退）。
+ */
+const lookupArchive = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
+    // 搜索与比较都用简体：存档站与曲库一样是简体，而平台可能给繁体。
+    const subject = await simplifiedSubject(song);
+    const artist = (subject.artists ?? []).map(entry => entry.name).filter(Boolean).join(' ');
+    const query = [subject.name, artist].filter(Boolean).join(' ').trim();
+    if (!query) return null;
+
+    const hits = await searchWebArchive(query);
+    if (hits.length === 0) {
+        console.info('[Fallback] 存档站没有搜到', { song: song.name, query });
+        return null;
+    }
+
+    let bestScore = 0;
+    const ranked: { hit: WebArchiveHit; score: number }[] = [];
+    for (const hit of hits) {
+        // 搜索页里常混着同名剪辑：「为你写的歌 (30秒片段)」归一化后和原版一模一样，得按原文挡。
+        if (CLIP_TITLE.test(hit.title)) continue;
+        if (isDifferentVersion(subject.name, hit.title)) continue;
+        const score = scoreSongMatch(subject, asCandidate(hit));
+        if (score > bestScore) bestScore = score;
+        if (score >= MATCH_THRESHOLD) ranked.push({ hit, score });
+    }
+    if (ranked.length === 0) {
+        console.info('[Fallback] 存档站里没有足够像的一首', { song: song.name, query, bestScore });
+        return null;
+    }
+    ranked.sort((a, b) => b.score - a.score);
+
+    // 只试前两条：每条要两次请求，再多也不会有新结果，只会拖长「放不出来」的等待。
+    for (const { hit, score } of ranked.slice(0, 2)) {
+        const source = await fetchWebArchiveAudio(hit.id);
+        if (!source?.url) continue;
+        const expectedMs = song.durationMs > 0 ? song.durationMs : 0;
+        const measured = await probeAudioDurationMs(source.url, undefined, { priority: true });
+        if (measured !== null) {
+            if (looksLikeClip(measured, expectedMs)) {
+                console.info('[Fallback] 存档站给的是一段', { song: hit.title, measured, expectedMs });
+                continue;
+            }
+            if (expectedMs > 0 && Math.abs(measured - expectedMs) > ARCHIVE_DURATION_TOLERANCE_MS) {
+                console.info('[Fallback] 存档站给的是别的录音', { song: hit.title, measured, expectedMs });
+                continue;
+            }
+        } else if (await isClipAudio(source.url, expectedMs, { priority: true })) {
+            continue;
+        }
+        console.info('[Fallback] 改由存档站提供', {
+            song: song.name,
+            matched: hit.title,
+            artist: hit.artist,
+            score,
+            measured,
+        });
+        return source;
+    }
+    console.info('[Fallback] 存档站的候选都不合格', { song: song.name, query, tried: Math.min(ranked.length, 2) });
+    return null;
+};
+
+/**
+ * 最后一步的入口：查一次，没查到就把「没有这首」记五分钟。
+ *
+ * 记忆只针对「没查到」：查到了也不能缓存地址——存档站的地址是一次性签名，存下来只会放不出来。
+ */
+export const tryWebArchive = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
+    if (!isWebArchiveAvailable()) return null;
+    const key = getPlaybackSongKey(song);
+    const missedAt = archiveMisses.get(key);
+    if (missedAt !== undefined && Date.now() - missedAt < ARCHIVE_MISS_TTL_MS) return null;
+    const found = await lookupArchive(song, quality);
+    if (found) {
+        archiveMisses.delete(key);
+        return found;
+    }
+    archiveMisses.set(key, Date.now());
+    return null;
+};
+
+
 /**
  * 内置源给不出完整版时，兜底源给的地址；其余一律 null（omni 继续走内置源原本的路）。
  * 绝不抛错：这里出任何问题都只是「这条捷径没走成」。
@@ -410,6 +526,13 @@ export const resolveLockedSongAudio = async (
             if (crossed) return crossed;
         } catch (error) {
             console.warn('[Fallback] 跨平台同曲换址失败，保持内置源行为', error);
+        }
+        // 更后面一步：网页存档站。三家曲库都没有的歌，最后只能到它这里找。
+        try {
+            const archived = await tryWebArchive(song, quality);
+            if (archived) return archived;
+        } catch (error) {
+            console.warn('[Fallback] 存档站这一路失败，保持内置源行为', error);
         }
         return null;
     } catch (error) {
