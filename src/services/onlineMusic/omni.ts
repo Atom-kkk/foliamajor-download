@@ -1373,7 +1373,8 @@ export const omni = {
         // 从推荐/歌单进来的歌经常不带 fee，按权限标记筛会把它们整批漏掉。
         let servedAsClip = false;
         if (source?.url && !source.preview && song.durationMs > 60_000) {
-            servedAsClip = await isClipAudio(source.url, song.durationMs);
+            // 取址路径上的判定：队列被预取占满时也要给结论，否则「不确定」等于把片段当整首放出去。
+            servedAsClip = await isClipAudio(source.url, song.durationMs, { priority: true });
             if (servedAsClip) {
                 console.info('[ClipProbe] 这条地址比这首歌短得多，改问兜底源', {
                     song: song.name,

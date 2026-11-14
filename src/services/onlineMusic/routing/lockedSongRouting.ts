@@ -280,7 +280,7 @@ export const resolveLockedSongAudio = async (
                     continue;
                 }
                 // 片段也算失败：换下一个候选，而不是把 30 秒的文件交给播放器。
-                const clipped = await isClipAudio(source.url, song.durationMs);
+                const clipped = await isClipAudio(source.url, song.durationMs, { priority: true });
                 console.info(`[Fallback] 候选结果：${provider.id} / ${song.name} clipped=${clipped} url=${source.url.slice(0, 60)}`);
                 if (clipped) continue;
                 return source;

@@ -6391,10 +6391,13 @@ async function setMainWindowTransparentModeFromRemote(enabled) {
  * 早期版本可能把「兜底换源换错的版本」（例如伴奏）当成整首存了下来；而播放一旦命中缓存就
  * 不再取址，于是版本排除、片段判定全都被绕过——表现就是怎么改都在放错的那一份。
  * 用标记文件保证只清一次，之后正常按 LRU 回收。
+ *
+ * v3（2026-11-14）：片段判定修好之前，登录会员账号后平台给的 1 分钟试听被当成整首存了下来。
+ * 缓存先于取址，不重取就一直只有 1 分钟，所以换一次标记让它重建。
  */
 function resetLegacyAudioCacheOnce() {
   const directory = getAudioCacheDirectory();
-  const marker = path.join(directory, '.cache-reset-v2');
+  const marker = path.join(directory, '.cache-reset-v3');
   try {
     if (fs.existsSync(marker)) return;
     fs.mkdirSync(directory, { recursive: true });

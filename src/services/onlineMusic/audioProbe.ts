@@ -22,6 +22,8 @@ const CLIP_RATIO = 0.7;
 const PROBE_TIMEOUT_MS = 4_000;
 /** 结果缓存：同一地址一分钟内不再重复探测。 */
 const CACHE_TTL_MS = 60_000;
+/** 「不确定」（null）只记这么久：一次超时不该让同一个地址在整整一分钟里都判不出来。 */
+const UNKNOWN_TTL_MS = 15_000;
 
 let probeElement: HTMLAudioElement | null = null;
 /** 串行队列：同一时刻只有一个探测在跑，避免多个 media 元素抢解码器。 */
@@ -101,11 +103,17 @@ const measure = (url: string, timeoutMs: number): Promise<number | null> => new 
     audio.src = url;
 });
 
-export const probeAudioDurationMs = async (url: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<number | null> => {
+export const probeAudioDurationMs = async (
+    url: string,
+    timeoutMs = PROBE_TIMEOUT_MS,
+    options?: { priority?: boolean },
+): Promise<number | null> => {
     const cached = cache.get(url);
-    if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.ms;
-    // 预取会把队列占满；这时候宁可「不确定」，也不要让播放的取址排在它后面。
-    if (pending >= MAX_PENDING) return null;
+    if (cached && Date.now() - cached.at < (cached.ms === null ? UNKNOWN_TTL_MS : CACHE_TTL_MS)) return cached.ms;
+    // 预取会把队列占满；那时宁可按「不确定」处理，也别让播放排在它后面。
+    // **但取址本身的探测（播放、下载、兜底候选）不受这条限制**：在这里「不确定」等于
+    // 「当成整首」，登录用户会因此只听到一段试听，却没有任何提示。
+    if (!options?.priority && pending >= MAX_PENDING) return null;
 
     pending += 1;
     const run = queue.then(() => measure(url, timeoutMs).catch(() => null));
@@ -152,11 +160,21 @@ export const probeAudioSize = async (url: string): Promise<number | null> => {
  * 是不是一段被截断的音频。
  *
  * **先量字节**：一次 HEAD 就够（几十毫秒），不依赖解码器，也不会因为一次性签名地址而失败。
- * 字节量不到时才退回 `<audio>` 的时长探测（那个最多要等 4 秒）。
+ *
+ * 但字节只能证明「一定不是整首」这一种情况（按 48 kbps 的下限算），**不能反过来证明它是整首**：
+ * 平台给的试听片段若是 60 秒、128~320 kbps，字节数会超过按 48 kbps 算出来的整首下限——
+ * 一首 4 分钟的歌下限是 1.44 MB，而 60 秒 320 kbps 有 2.4 MB。那样它就被当成整首放出去：
+ * 登录会员账号后「会员歌只能试听 1 分钟」正是这样来的。所以字节判不出来时，仍要量一次真实时长。
+ *
+ * `priority`：这是取址路径上的判定（播放、下载、兜底候选），队列占满时也要给出结论。
  */
-export const isClipAudio = async (url: string, expectedMs: number): Promise<boolean> => {
+export const isClipAudio = async (
+    url: string,
+    expectedMs: number,
+    options?: { priority?: boolean },
+): Promise<boolean> => {
     const bytes = await probeAudioSize(url);
-    if (bytes !== null) return looksLikeClipBySize(bytes, expectedMs);
-    const actualMs = await probeAudioDurationMs(url);
+    if (bytes !== null && looksLikeClipBySize(bytes, expectedMs)) return true;
+    const actualMs = await probeAudioDurationMs(url, PROBE_TIMEOUT_MS, options);
     return actualMs !== null ? looksLikeClip(actualMs, expectedMs) : false;
 };

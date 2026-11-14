@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { looksLikeClip, looksLikeClipBySize } from '@/services/onlineMusic/audioProbe';
 
 // test/unit/onlineMusic/audioProbe.test.ts
@@ -38,5 +38,57 @@ describe('clip detection by file size', () => {
         expect(looksLikeClipBySize(500_000, 60_000)).toBe(false);
         expect(looksLikeClipBySize(null, 291_944)).toBe(false);
         expect(looksLikeClipBySize(801_271, 0)).toBe(false);
+    });
+});
+
+// 登录会员账号后「会员歌只能试听 1 分钟」：平台给的是一条 60 秒、高码率的试听地址。
+// 字节数超过按 48 kbps 算出来的整首下限（4 分钟的歌是 1.44 MB，60 秒 320 kbps 有 2.4 MB），
+// 旧代码据此直接判「不是片段」返回，时长那一判据根本没跑过。字节只能证明「一定不是整首」，
+// 不能反过来证明「是整首」。
+describe('a short answer whose size looks like a whole song', () => {
+    class FakeAudio {
+        duration = 0;
+        preload = '';
+        muted = false;
+        private handlers = new Map<string, Set<() => void>>();
+
+        set src(value: string) {
+            // 这条地址按 240 秒的歌算，只给 60 秒。
+            this.duration = value.includes('sixty-seconds') ? 60 : 240;
+            setTimeout(() => this.emit('loadedmetadata'), 0);
+        }
+        get src() { return ''; }
+
+        addEventListener(type: string, handler: () => void) {
+            if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+            this.handlers.get(type)!.add(handler);
+        }
+        removeEventListener(type: string, handler: () => void) {
+            this.handlers.get(type)?.delete(handler);
+        }
+        removeAttribute() { /* 元素留着复用 */ }
+        load() { /* noop */ }
+        pause() { /* noop */ }
+        private emit(type: string) {
+            for (const handler of this.handlers.get(type) ?? []) handler();
+        }
+    }
+
+    it('is still called a clip: the size cannot prove otherwise', async () => {
+        vi.stubGlobal('window', { electron: { probeAudioSize: async () => 2_400_000 } });
+        vi.stubGlobal('Audio', FakeAudio as unknown as typeof Audio);
+        const { isClipAudio } = await import('@/services/onlineMusic/audioProbe');
+
+        await expect(isClipAudio('https://example.test/sixty-seconds.mp3', 240_000, { priority: true })).resolves.toBe(true);
+        vi.unstubAllGlobals();
+    });
+
+    it('keeps a whole song that is simply large', async () => {
+        vi.stubGlobal('window', { electron: { probeAudioSize: async () => 9_600_000 } });
+        vi.stubGlobal('Audio', FakeAudio as unknown as typeof Audio);
+        const { isClipAudio } = await import('@/services/onlineMusic/audioProbe');
+
+        await expect(isClipAudio('https://example.test/whole.mp3', 240_000, { priority: true })).resolves.toBe(false);
+        vi.unstubAllGlobals();
     });
 });

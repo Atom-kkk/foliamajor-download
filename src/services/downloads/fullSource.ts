@@ -42,8 +42,9 @@ const tryProvider = async (
         const source = await provider.playback.getAudioSource(target, level);
         if (!source?.url || source.preview) return null;
         // 下载必须是整首：平台没标 preview 也可能给的是一条 30 秒地址（会员歌常见），
-        // 所以这里实测一次时长，明显短于歌曲就换下一个源。
-        const actualMs = await probeAudioDurationMs(source.url);
+        // 所以这里实测一次时长，明显短于歌曲就换下一个源。下载是用户主动发起的，等得起，
+        // 队列占满也照测（priority）——否则「不确定」会让下载存下一段试听。
+        const actualMs = await probeAudioDurationMs(source.url, undefined, { priority: true });
         if (looksLikeClip(actualMs, expectedMs)) return null;
         return source;
     } catch {
