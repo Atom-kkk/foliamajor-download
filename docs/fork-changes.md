@@ -163,7 +163,7 @@ src/components/modal/settings/pages/integration/useCustomSource.ts    表单逻�
 ### 2.1 什么时候才算「锁定」
 
 ```text
-src/services/onlineMusic/routing/lockedSongRouting.ts   （303 行）
+src/services/onlineMusic/routing/lockedSongRouting.ts   （695 行）
 ```
 
 `isLockedForPlayback(song)` 的三条触发条件，任一成立才算：
@@ -209,7 +209,7 @@ src/services/onlineMusic/routing/lockedSongRouting.ts   （303 行）
 1. VITE_LOCKED_SONG_FALLBACK_PROVIDER 指定的源（默认 custom）
 2. 星海音源 —— 按原歌在自己平台上的 id 换地址，不搜索，最快也最稳
 3. 酷我 —— 按「标题 + 歌手」跨源搜索，要一次搜索，放最后
-4. 跨平台同曲 + 星海换址 —— 网易云 → 酷狗，按顺序各搜一次（2026-11-14 加）
+4. 跨平台同曲 + 换址 —— 网易云 → 酷狗，按顺序各搜一次；星海免费换址拿不到时，若该平台自己登录着，再用该平台的账号取一次（2026-11-14 加，2026-11-20 补登录态）
 5. 网页存档站 —— gequbao.com，三家曲库都没有的歌最后到它这里找（2026-11-14 加）
 ```
 
@@ -225,6 +225,10 @@ src/services/onlineMusic/routing/lockedSongRouting.ts   （303 行）
 
 这一步对 QQ、波点、Spotify 的歌同样生效：它们的会员歌在本平台只给片段，而曲目在网易云大多有。
 门槛与前几步一致：版本排除 + 85 分 + 实测不是片段。
+
+星海只能换免费音频。目标平台的原版是会员曲时，星海会答「未找到该歌曲」；这时如果该平台有真人
+账号登录着（游客不算），就用该平台自己的 `getAudioSource` 再问一次——有会员权限的账号能拿到
+完整地址，没有权限的仍然只得到试听，随后照旧回落。
 
 第 5 步（网页存档站）补的是另一种缺口：**三个曲库都没有这首歌**。「偏爱 / 张芸京」在酷我搜出 20 条
 全是 Live / cover / 改编，存档站搜到的第一条就是原版。实测三条：

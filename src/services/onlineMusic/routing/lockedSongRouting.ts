@@ -1,13 +1,15 @@
 import type { SongResult, UnifiedSong } from '../../../types';
-import type { AudioQualityPreference, OmniAudioSource, OnlineMusicProvider, OnlineProviderId, ProviderSongAvailability } from '../../../types/onlineMusic';
+import type { AudioQualityPreference, OmniAudioSource, OnlineMusicProvider, OnlineProviderId, ProviderAudioSource, ProviderSongAvailability } from '../../../types/onlineMusic';
 import { getOnlineMusicProvider, getOnlineMusicProviderForSong, providerSupports } from '../providerRegistry';
 import { getPlaybackSongKey, getPlaybackSourceRef } from '../../../utils/appPlaybackGuards';
+import { errorFields } from '../../../utils/errorText';
 import { isLockedSongRoutingEnabled, lockedSongFallbackProviderId } from '../custom/customSourceConfig';
 import { XINGHAI_SOURCE_ID } from '../xinghai/xinghai';
 import { isClipAudio, looksLikeClip, probeAudioDurationMs } from '../audioProbe';
 import { isDifferentVersion } from '../songVersionMatch';
 import { fetchWebArchiveAudio, isWebArchiveAvailable, searchWebArchive, type WebArchiveHit } from './webArchive';
-import { useOnlineProviderAccountStore } from '../../../stores/useOnlineProviderAccountStore';
+import { useOnlineProviderAccountStore, type OnlineProviderAccountState } from '../../../stores/useOnlineProviderAccountStore';
+import { isGuestUser } from '../guest/guestAccess';
 
 // src/services/onlineMusic/routing/lockedSongRouting.ts
 //
@@ -164,6 +166,14 @@ const accountVipType = (providerId: string): number => {
     return typeof vipType === 'number' && Number.isFinite(vipType) ? vipType : 0;
 };
 
+/** 这个平台是不是有真人账号登录着。游客会话不算：它的地址与没登录时一样。 */
+const isSignedIn = (providerId: string): boolean => {
+    // 条目是按平台懒建的（初始 `accounts: {}`）：冷启动的会话恢复可能早于账号读取写进这一条。
+    const accounts: Record<string, OnlineProviderAccountState | undefined> = useOnlineProviderAccountStore.getState().accounts;
+    const user = accounts[providerId]?.user;
+    return Boolean(user) && !isGuestUser(user);
+};
+
 /**
  * 这一首是不是「确定放不出来，只能试听 / 报错」。
  *
@@ -304,9 +314,10 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
  *   - 但同一首常在别家：网易云（星海 wy 免费）或酷狗（星海 kg 免费，且曲库最全——
  *     周杰伦《说好的幸福呢》网易云只有翻唱、酷狗有原版，换上来的文件 10.27 MB）。
  *
- * 所以最后按顺序试这两个平台：各自搜同曲 → 星海换址 → 实测不是片段。质量门槛与别的候选
- * 一样：版本排除 + 85 分 + 不是片段，绝不拿别的录音顶上去。歌本来就来自某一家时跳过那一家
- * （前面的星海候选已经换过一次）。
+ * 所以最后按顺序试这两个平台：各自搜同曲 → 免费换址 → 目标平台自己登录着时，再用它自己的
+ * 账号取一次址 → 实测不是片段。免费换址只能拿免费音频，会员曲要靠目标平台自己的账号权限；
+ * 没有会员的账号在这一步也只会得到试听，随后照旧回落。质量门槛与别的候选一样：版本排除 +
+ * 85 分 + 不是片段，绝不拿别的录音顶上去。歌本来就来自某一家时跳过那一家（前面的候选已经换过一次）。
  */
 const CROSS_PLATFORMS = ['netease', 'kugou'] as const;
 
@@ -367,19 +378,60 @@ const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualit
                     console.info('[Fallback] 这个平台里没有足够像的一首', { song: song.name, query: asked.text, platform: platformId });
                     continue;
                 }
-                const source = await xinghai.playback.getAudioSource(found.song, quality);
-                if (!source?.url || source.preview) continue;
                 const expectedMs = found.song.durationMs > 0 ? found.song.durationMs : song.durationMs;
-                if (await isClipAudio(source.url, expectedMs, { priority: true })) continue;
-                console.info('[Fallback] 改由同曲换址', {
-                    song: song.name,
-                    via: platformId,
-                    matched: found.song.name,
-                    score: found.score,
-                    // 标题判据没走通、靠「全体歌手 + 长度」认的，日志里标出来。
-                    ...(found.score === MATCH_THRESHOLD && asked.titleBlind ? { by: 'lineup+length' } : {}),
-                });
-                return source;
+                let source: ProviderAudioSource | null = null;
+                try {
+                    source = await xinghai.playback.getAudioSource(found.song, quality);
+                } catch (error) {
+                    console.info('[Fallback] 免费换址没有成功', {
+                        song: song.name,
+                        platform: platformId,
+                        ...errorFields(error),
+                    });
+                }
+                if (source?.url && !source.preview && !(await isClipAudio(source.url, expectedMs, { priority: true }))) {
+                    console.info('[Fallback] 改由同曲换址', {
+                        song: song.name,
+                        via: platformId,
+                        matched: found.song.name,
+                        score: found.score,
+                        // 标题判据没走通、靠「全体歌手 + 长度」认的，日志里标出来。
+                        ...(found.score === MATCH_THRESHOLD && asked.titleBlind ? { by: 'lineup+length' } : {}),
+                    });
+                    return source;
+                }
+
+                // 免费换址只能拿免费音频。目标平台自己登录着时，用它自己的账号再问一次：
+                // 有会员的人能拿到完整地址，没会员仍然只会得到试听，随后照旧回落。
+                if (isSignedIn(platformId) && provider.playback?.getAudioSource) {
+                    console.info('[Fallback] 免费换址没给出完整地址，改用目标平台自己的登录态', {
+                        song: song.name,
+                        platform: platformId,
+                    });
+                    try {
+                        const own = await provider.playback.getAudioSource(found.song, quality);
+                        if (own?.url && !own.preview && !(await isClipAudio(own.url, expectedMs, { priority: true }))) {
+                            console.info('[Fallback] 改由目标平台自己的登录态提供', {
+                                song: song.name,
+                                via: platformId,
+                                matched: found.song.name,
+                                score: found.score,
+                            });
+                            return own;
+                        }
+                        console.info('[Fallback] 目标平台的登录态也只给了试听', {
+                            song: song.name,
+                            platform: platformId,
+                        });
+                    } catch (error) {
+                        console.warn('[Fallback] 目标平台自己的取址失败', {
+                            song: song.name,
+                            platform: platformId,
+                            ...errorFields(error),
+                        });
+                    }
+                }
+                continue;
             } catch (error) {
                 console.warn('[Fallback] 同曲换址失败，换下一条查询', { platform: platformId, query: asked.text, error });
             }
