@@ -35,11 +35,11 @@
 | --- | --- |
 | 1024+ | `src/types.ts` |
 | 256+ | `src/types/onlineMusic.ts` |
+| 128+ | `src/components/modal/settings/kit/index.ts` |
 | 128+ | `src/stores/usePlaybackStore.ts` |
 | 128+ | `src/types/ponder.ts` |
 | 128+ | `src/utils/appPlaybackGuards.ts` |
 | 64+ | `src/components/command-palette/types.ts` |
-| 64+ | `src/components/modal/settings/kit/index.ts` |
 | 64+ | `src/components/visualizer/definition.ts` |
 | 64+ | `src/i18n/config.ts` |
 | 64+ | `src/library/core/collection/collection.contract.ts` |
@@ -66,6 +66,7 @@
 | 32+ | `src/components/visualizer/registry.tsx` |
 | 32+ | `src/components/visualizer/tuningDefinition.ts` |
 | 32+ | `src/components/visualizer/tuningRegistry.ts` |
+| 32+ | `src/components/visualizer/visualizerSeedHash.ts` |
 | 32+ | `src/components/wall/layout.ts` |
 | 32+ | `src/components/wall/wallSlots.ts` |
 | 32+ | `src/hooks/useReducedMotionFor.ts` |
@@ -80,6 +81,7 @@
 | 32+ | `src/services/onlineMusic/providerRegistry.ts` |
 | 32+ | `src/services/onlineMusic/songMetadata.ts` |
 | 32+ | `src/stores/motionSignals.ts` |
+| 32+ | `src/stores/storagePrimitives.ts` |
 | 32+ | `src/stores/useCollectionNavigationStore.ts` |
 | 32+ | `src/stores/usePlayerChromeSettingsStore.ts` |
 | 32+ | `src/stores/useSettingsModalStore.ts` |
@@ -89,6 +91,7 @@
 | 32+ | `src/types/navidrome.ts` |
 | 32+ | `src/utils/appPlaybackHelpers.ts` |
 | 32+ | `src/utils/coverUrl.ts` |
+| 32+ | `src/utils/errorText.ts` |
 | 32+ | `src/utils/fontStacks.ts` |
 | 32+ | `src/utils/lyricRenderQuality.ts` |
 | 32+ | `src/utils/lyrics/graphemeTiming.ts` |
@@ -123,6 +126,7 @@
 - `dev/probes/lattice.probe.tsx`
 - `dev/probes/latticeExit.probe.tsx`
 - `dev/probes/latticePerformance.probe.tsx`
+- `dev/probes/latticeRadio.probe.tsx`
 - `dev/probes/latticeTitle.probe.tsx`
 - `dev/probes/latticeTitleExpansion.probe.tsx`
 - `dev/probes/libraryBehavior.probe.tsx`
@@ -277,6 +281,7 @@
 - `src/components/visualizer/hanabi/entry.tsx`
 - `src/components/visualizer/lumiere/entry.tsx`
 - `src/components/visualizer/machi/entry.tsx`
+- `src/components/visualizer/metaphor/entry.tsx`
 - `src/components/visualizer/monet/entry.tsx`
 - `src/components/visualizer/nebbia/entry.tsx`
 - `src/components/visualizer/partita/entry.tsx`
@@ -302,6 +307,7 @@
 - `src/components/visualizer/hanabi/tuning.ts`
 - `src/components/visualizer/lumiere/tuning.ts`
 - `src/components/visualizer/machi/tuning.ts`
+- `src/components/visualizer/metaphor/tuning.ts`
 - `src/components/visualizer/monet/tuning.ts`
 - `src/components/visualizer/nebbia/tuning.ts`
 - `src/components/visualizer/partita/tuning.ts`
@@ -327,6 +333,7 @@
 - `src/components/visualizer/hanabi/tuning.ts`
 - `src/components/visualizer/lumiere/tuning.ts`
 - `src/components/visualizer/machi/tuning.ts`
+- `src/components/visualizer/metaphor/tuning.ts`
 - `src/components/visualizer/monet/tuning.ts`
 - `src/components/visualizer/nebbia/tuning.ts`
 - `src/components/visualizer/partita/tuning.ts`
