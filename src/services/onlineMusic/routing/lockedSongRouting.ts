@@ -5,6 +5,7 @@ import { getPlaybackSongKey, getPlaybackSourceRef } from '../../../utils/appPlay
 import { errorFields } from '../../../utils/errorText';
 import { isLockedSongRoutingEnabled, lockedSongFallbackProviderId } from '../custom/customSourceConfig';
 import { XINGHAI_SOURCE_ID } from '../xinghai/xinghai';
+import { ANIMEMUSIC_SOURCE_ID } from '../animemusic/animemusic';
 import { isClipAudio, looksLikeClip, probeAudioDurationMs } from '../audioProbe';
 import { isDifferentVersion } from '../songVersionMatch';
 import { fetchWebArchiveAudio, isWebArchiveAvailable, searchWebArchive, type WebArchiveHit } from './webArchive';
@@ -214,12 +215,14 @@ export const isLockedForPlayback = (song: SongResult): boolean => {
  * 兜底源，按顺序给出一串候选：
  *   1. `VITE_LOCKED_SONG_FALLBACK_PROVIDER` 指定的那个（默认 `custom`）；
  *   2. 星海——按原歌在自己平台上的 id 换地址，不搜索，最快也最稳；
- *   3. 酷我——按「标题 + 歌手」跨源找同一首，要一次搜索，放最后。
+ *   3. 聚合音源——同样是按 id 换址，但它对网易云/酷狗的会员曲会给完整文件（星海只免费换址，
+ *      会员曲拿不到）。排第二是因为它每次都要一次 POST，且是同一类「换址」候选；
+ *   4. 酷我——按「标题 + 歌手」跨源找同一首，要一次搜索，放最后。
  *
- * 星海在前是实测结论：把它挪到酷我后面之后，每首歌都先多付一次搜索，原本能完整播放的歌
- * 反而退回试听。酷我只在星海给不出地址时才问。
+ * 星海在最前是实测结论：把它挪到酷我后面之后，每首歌都先多付一次搜索，原本能完整播放的歌
+ * 反而退回试听。酷我只在换址候选都给不出地址时才问。
  *
- * 星海换的是同一个 id 的音频，平台上个别本身错标的条目（音频是伴奏）它绕不开——那种情况
+ * 换址换的是同一个 id 的音频，平台上个别本身错标的条目（音频是伴奏）它绕不开——那种情况
  * 在搜索列表里选另一条别的平台的同名结果即可。
  *
  * 歌本来就来自某条候选源时跳过它，不能兜回自己。
@@ -228,7 +231,7 @@ const fallbackProviders = (song: SongResult): OnlineMusicProvider[] => {
     const ref = getPlaybackSourceRef(song);
     const configured = lockedSongFallbackProviderId();
     const candidateIds: OnlineProviderId[] = [configured];
-    for (const id of [XINGHAI_SOURCE_ID, 'kuwo'] as OnlineProviderId[]) {
+    for (const id of [XINGHAI_SOURCE_ID, ANIMEMUSIC_SOURCE_ID, 'kuwo'] as OnlineProviderId[]) {
         if (!candidateIds.includes(id)) candidateIds.push(id);
     }
 
@@ -306,7 +309,7 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
 };
 
 /**
- * 跨平台兜底：本平台、星海、酷我都拿不到时，去**别的平台**找同一首，再用星海换它的地址。
+ * 跨平台兜底：本平台、星海、酷我都拿不到时，去**别的平台**找同一首，再用换址后端换它的地址。
  *
  * 为什么需要这一步（2026-11-14 实测）：
  *   - 星海对 **QQ 源（tx）** 已经要认证：`{"code":403,"msg":"该音源仅对认证用户开放…"}`；
@@ -314,12 +317,50 @@ const findInFallback = async (provider: OnlineMusicProvider, song: SongResult): 
  *   - 但同一首常在别家：网易云（星海 wy 免费）或酷狗（星海 kg 免费，且曲库最全——
  *     周杰伦《说好的幸福呢》网易云只有翻唱、酷狗有原版，换上来的文件 10.27 MB）。
  *
- * 所以最后按顺序试这两个平台：各自搜同曲 → 免费换址 → 目标平台自己登录着时，再用它自己的
- * 账号取一次址 → 实测不是片段。免费换址只能拿免费音频，会员曲要靠目标平台自己的账号权限；
- * 没有会员的账号在这一步也只会得到试听，随后照旧回落。质量门槛与别的候选一样：版本排除 +
- * 85 分 + 不是片段，绝不拿别的录音顶上去。歌本来就来自某一家时跳过那一家（前面的候选已经换过一次）。
+ * 所以最后按顺序试这两个平台：各自搜同曲 → 换址后端（星海 → 聚合音源）→ 目标平台自己登录着时，
+ * 再用它自己的账号取一次址 → 实测不是片段。星海只能换免费音频，会员曲要下一档的聚合音源
+ * （2026-11-21 实测：网易云 `fee=1` 的歌它给完整 mp3 / flac）；账号那一档要有会员才有效。
+ * 质量门槛与别的候选一样：版本排除 + 85 分 + 不是片段，绝不拿别的录音顶上去。
+ * 歌本来就来自某一家时跳过那一家（前面的候选已经换过一次）。
  */
 const CROSS_PLATFORMS = ['netease', 'kugou'] as const;
+
+/** 按 id 换址的后端，按便宜到贵的顺序。星海是一次 GET 且只给免费音频；聚合音源能补上会员曲。 */
+const SWAP_BACKENDS: readonly OnlineProviderId[] = [XINGHAI_SOURCE_ID, ANIMEMUSIC_SOURCE_ID];
+
+/**
+ * 用换址后端给这一首换一条完整地址：星海先试（免费、一次 GET），拿不到再问聚合音源
+ * （会员曲只有它给）。哪一个都拿不到就回 null，交给后面的账号/存档站。
+ */
+const swapAddressThroughBackends = async (
+    target: SongResult,
+    quality: AudioQualityPreference,
+    expectedMs: number,
+): Promise<{ source: ProviderAudioSource; via: OnlineProviderId } | null> => {
+    for (const backendId of SWAP_BACKENDS) {
+        const backend = getOnlineMusicProvider(backendId);
+        if (!backend?.playback?.getAudioSource) continue;
+        if (backend.getAvailability && !backend.getAvailability().configured) continue;
+        try {
+            const source = await backend.playback.getAudioSource(target, quality);
+            if (source?.url && !source.preview && !(await isClipAudio(source.url, expectedMs, { priority: true }))) {
+                return { source, via: backendId };
+            }
+            console.info('[Fallback] 换址后端没给出完整地址', {
+                song: target.name,
+                backend: backendId,
+                preview: Boolean(source?.preview),
+            });
+        } catch (error) {
+            console.info('[Fallback] 换址后端没有成功', {
+                song: target.name,
+                backend: backendId,
+                ...errorFields(error),
+            });
+        }
+    }
+    return null;
+};
 
 /** 在某个平台的搜索结果里挑最像的一条；没有就像素返回 null。 */
 const bestCandidate = (
@@ -348,8 +389,9 @@ const bestCandidate = (
 
 const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualityPreference): Promise<OmniAudioSource | null> => {
     const origin = getPlaybackSourceRef(song);
-    const xinghai = getOnlineMusicProvider(XINGHAI_SOURCE_ID);
-    if (!xinghai?.playback?.getAudioSource) return null;
+    // 星海与聚合音源都能按 id 换址；两个都不在（网页版）就不必再搜。
+    const canSwap = SWAP_BACKENDS.some(backendId => providerSupports(getOnlineMusicProvider(backendId), 'playback'));
+    if (!canSwap) return null;
 
     // 搜索与比较都用简体视图：Spotify 给的是繁体曲目名（「說好的幸福呢」），曲库存的是简体。
     const subject = await simplifiedSubject(song);
@@ -379,32 +421,25 @@ const bridgeThroughOtherPlatform = async (song: SongResult, quality: AudioQualit
                     continue;
                 }
                 const expectedMs = found.song.durationMs > 0 ? found.song.durationMs : song.durationMs;
-                let source: ProviderAudioSource | null = null;
-                try {
-                    source = await xinghai.playback.getAudioSource(found.song, quality);
-                } catch (error) {
-                    console.info('[Fallback] 免费换址没有成功', {
-                        song: song.name,
-                        platform: platformId,
-                        ...errorFields(error),
-                    });
-                }
-                if (source?.url && !source.preview && !(await isClipAudio(source.url, expectedMs, { priority: true }))) {
+                const swapped = await swapAddressThroughBackends(found.song, quality, expectedMs);
+                if (swapped) {
                     console.info('[Fallback] 改由同曲换址', {
                         song: song.name,
                         via: platformId,
+                        backend: swapped.via,
                         matched: found.song.name,
                         score: found.score,
                         // 标题判据没走通、靠「全体歌手 + 长度」认的，日志里标出来。
                         ...(found.score === MATCH_THRESHOLD && asked.titleBlind ? { by: 'lineup+length' } : {}),
                     });
-                    return source;
+                    return swapped.source;
                 }
 
-                // 免费换址只能拿免费音频。目标平台自己登录着时，用它自己的账号再问一次：
-                // 有会员的人能拿到完整地址，没会员仍然只会得到试听，随后照旧回落。
+                // 换址后端都拿不到（免费换址只给免费音频，聚合音源能补会员曲但偶尔也不给）。
+                // 目标平台自己登录着时，用它自己的账号再问一次：有会员的人能拿到完整地址，
+                // 没会员仍然只会得到试听，随后照旧回落。
                 if (isSignedIn(platformId) && provider.playback?.getAudioSource) {
-                    console.info('[Fallback] 免费换址没给出完整地址，改用目标平台自己的登录态', {
+                    console.info('[Fallback] 换址没给出完整地址，改用目标平台自己的登录态', {
                         song: song.name,
                         platform: platformId,
                     });
@@ -635,7 +670,7 @@ export const resolveLockedSongAudio = async (
         } else if (!isLockedForPlayback(song)) {
             return null;
         }
-        // 依次试每个候选：星海按 id 换（最不会串版本），失败或给片段再换酷我搜索。
+        // 依次试每个候选：星海与聚合音源按 id 换（最不会串版本），失败或给片段再换酷我搜索。
         const providers = fallbackProviders(song);
         if (providers.length === 0) {
             console.info(`[Fallback] 没有可用的兜底源：${song.name}`);

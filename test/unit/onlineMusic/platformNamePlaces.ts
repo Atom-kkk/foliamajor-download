@@ -21,7 +21,7 @@ export const PLACE_KINDS = {
 export type PlaceKind = keyof typeof PLACE_KINDS;
 
 export interface PlatformNamePlace {
-    n: Partial<Record<'netease' | 'qq' | 'kugou' | 'bodian' | 'ytm' | 'spotify' | 'qishui' | 'fnmusic' | 'appleMusic' | 'kuwo' | 'xinghai' | 'custom', number>>;
+    n: Partial<Record<'netease' | 'qq' | 'kugou' | 'bodian' | 'ytm' | 'spotify' | 'qishui' | 'fnmusic' | 'appleMusic' | 'kuwo' | 'xinghai' | 'animemusic' | 'custom', number>>;
     // The kind of the file's lines of code; its comment lines are counted as comments.
     kind: PlaceKind;
     // What the lines are, where the kind alone does not say it.
@@ -34,14 +34,15 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'api/lyric-proxy.js': { n: { qq: 2, kugou: 1 }, kind: 'main', why: 'the built copy of api-ts/lyric-proxy.ts' },
     'api/qq.js': { n: { qq: 10 }, kind: 'main', why: 'the built copy of api-ts/qq.ts' },
     'electron/aiCredentialStore.cjs': { n: { qq: 1, kugou: 1, bodian: 1 }, kind: 'doc' },
+    'electron/animemusic/animemusicIpc.cjs': { n: { ytm: 1, qishui: 1, xinghai: 2 }, kind: 'doc', why: 'the comment that says which platforms the backend knows and which of them this proxy keeps' },
     'electron/backendLifecycle.cjs': { n: { netease: 1, qq: 1 }, kind: 'doc' },
     'electron/bodian/mediaCors.cjs': { n: { kuwo: 5 }, kind: 'main', why: 'the cover hosts bodian hands out include kuwo\'s' },
     'electron/linuxPasswordStore.cjs': { n: { qq: 1, kugou: 1 }, kind: 'main' },
     'electron/webArchive/webArchiveIpc.cjs': { n: { netease: 2, kugou: 2, kuwo: 4, xinghai: 1 }, kind: 'main', why: 'the comment that records which catalogues were measured to lack the song, so the archive site is not mistaken for a duplicate of them' },
     'electron/loginBackendIpc.cjs': { n: { netease: 6, qq: 6 }, kind: 'main', why: 'the IPC channels of the two embedded backends and the table that finds a backend by its platform id' },
-    'electron/main.cjs': { n: { netease: 8, qq: 15, kugou: 25, bodian: 12, ytm: 23, spotify: 25, qishui: 10, appleMusic: 7, fnmusic: 15, kuwo: 3, xinghai: 3 }, kind: 'main', why: 'starts each platform\'s local service and bridge, its IPC channels, its media hosts; raised by the upstream merge 2026-10-17; spotify +1 for the list of bridges a quit waits for (2026-10-22); fnmusic by the pr-fnmusic bridge back into the repo (2026-10-26); appleMusic +6 for the companion client, native resource resolver, its IPC channel and the quit hook; spotify +1 and appleMusic +1 for pausing their own players when a window rebuild hands nothing on (2026-11-07)' },
+    'electron/main.cjs': { n: { netease: 8, qq: 15, kugou: 25, bodian: 12, ytm: 23, spotify: 25, qishui: 10, appleMusic: 7, fnmusic: 15, kuwo: 3, xinghai: 3, animemusic: 3 }, kind: 'main', why: 'starts each platform\'s local service and bridge, its IPC channels, its media hosts; raised by the upstream merge 2026-10-17; spotify +1 for the list of bridges a quit waits for (2026-10-22); fnmusic by the pr-fnmusic bridge back into the repo (2026-10-26); appleMusic +6 for the companion client, native resource resolver, its IPC channel and the quit hook; spotify +1 and appleMusic +1 for pausing their own players when a window rebuild hands nothing on (2026-11-07); animemusic registers its swap-address bridge' },
     'electron/networkRecorder.cjs': { n: { netease: 4, qq: 3 }, kind: 'main', why: 'the hosts by which a request is filed under the backend that sent it' },
-    'electron/preload.cjs': { n: { netease: 6, qq: 5, kugou: 2, bodian: 1, ytm: 1, spotify: 1, qishui: 1, appleMusic: 1, fnmusic: 1, kuwo: 4, xinghai: 2 }, kind: 'main', why: 'the bridge methods and IPC channels of each platform; fnmusic adds its request channel' },
+    'electron/preload.cjs': { n: { netease: 6, qq: 5, kugou: 2, bodian: 1, ytm: 1, spotify: 1, qishui: 1, appleMusic: 1, fnmusic: 1, kuwo: 4, xinghai: 2, animemusic: 2 }, kind: 'main', why: 'the bridge methods and IPC channels of each platform; fnmusic adds its request channel; animemusic adds its swap-address method' },
     'electron/stageApi.cjs': { n: { netease: 18 }, kind: 'main', why: 'the stage API: its lyric source type, its search through the local service, and the provider a bare numeric song id belongs to' },
     'electron/tempDirEnvironment.cjs': { n: { netease: 1 }, kind: 'doc' },
     'electron/xinghai/xinghaiIpc.cjs': { n: { kuwo: 1 }, kind: 'doc' },
@@ -85,7 +86,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/services/automix/trackProfile.ts': { n: { spotify: 1 }, kind: 'doc' },
     'src/services/coverCache.ts': { n: { kugou: 1 }, kind: 'stored', why: 'a URL host' },
     'src/services/downloads/downloadSong.ts': { n: { kuwo: 1, xinghai: 1 }, kind: 'list', why: 'the order in which a download falls back between sources' },
-    'src/services/downloads/fullSource.ts': { n: { kuwo: 1, xinghai: 3 }, kind: 'list', why: 'the order in which a download looks for a full version' },
+    'src/services/downloads/fullSource.ts': { n: { netease: 1, kugou: 1, kuwo: 1, xinghai: 3, animemusic: 2 }, kind: 'list', why: 'the order in which a download looks for a full version' },
     'src/services/localLibraryV8Migration.ts': { n: { netease: 3, qq: 1, kugou: 1 }, kind: 'stored', why: 'a migration of stored values' },
     'src/services/localMusicService.ts': { n: { netease: 7 }, kind: 'lyric', why: 'a local song\'s lyric match searches one source and stores its id' },
     'src/services/lyricExport/collectOnlineLyrics.ts': { n: { netease: 4, qq: 1 }, kind: 'stored', why: 'cache keys from before the keys carried a platform' },
@@ -97,17 +98,19 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/services/onlineMetadataSearchService.ts': { n: { netease: 6, qq: 8, kugou: 5 }, kind: 'lyric', why: 'the order in which a local song\'s metadata is searched, and the id each source knows a song by' },
     'src/services/onlineMusic/account/accountRead.ts': { n: { netease: 2 }, kind: 'doc' },
     'src/services/onlineMusic/account/keptAfterRead.ts': { n: { qq: 1, kugou: 1, ytm: 1 }, kind: 'doc' },
+    'src/services/onlineMusic/animemusic/animemusic.ts': { n: { netease: 6, qq: 3, kugou: 5, bodian: 1, spotify: 1, qishui: 3, appleMusic: 1, kuwo: 4, xinghai: 4 }, kind: 'list', why: 'the table that turns a provider id into the shorthand this backend asks for, and the comment that records which of them it was measured to answer with' },
+    'src/services/onlineMusic/animemusic/animemusicProvider.ts': { n: { netease: 2, qq: 1, kugou: 1, kuwo: 1, xinghai: 3 }, kind: 'doc' },
     'src/services/onlineMusic/bodian/bodianNormalize.ts': { n: { kuwo: 2 }, kind: 'file', why: 'bodian hands out kuwo cover addresses over http; the kwcdn certificate does not cover nested hosts' },
     'src/services/onlineMusic/fmModes.ts': { n: { netease: 1 }, kind: 'doc' },
     'src/services/onlineMusic/guest/guestAccess.ts': { n: { custom: 1 }, kind: 'doc' },
     'src/services/onlineMusic/loginSelfCheck.ts': { n: { netease: 1 }, kind: 'doc' },
     'src/services/onlineMusic/omni.ts': { n: { netease: 5, qq: 1, kugou: 3, bodian: 1, ytm: 1, spotify: 1, kuwo: 1, custom: 1 }, kind: 'list', why: 'the order aggregate search asks the other sources in' },
     'src/services/onlineMusic/providerAccountCache.ts': { n: { kugou: 1 }, kind: 'doc' },
-    'src/services/onlineMusic/providerRegistry.ts': { n: { netease: 3, qq: 3, kugou: 3, bodian: 3, ytm: 3, spotify: 5, qishui: 3, appleMusic: 3, fnmusic: 3, kuwo: 4, xinghai: 3 }, kind: 'list', why: 'the list of platforms: where a platform is added; fnmusic registered with its provider and name' },
+    'src/services/onlineMusic/providerRegistry.ts': { n: { netease: 4, qq: 3, kugou: 4, bodian: 3, ytm: 3, spotify: 5, qishui: 3, appleMusic: 3, fnmusic: 3, kuwo: 4, xinghai: 5, animemusic: 3 }, kind: 'list', why: 'the list of platforms: where a platform is added; fnmusic registered with its provider and name; animemusic registered as the second swap-address source' },
     'src/services/onlineMusic/qq/qqProvider.ts': { n: { kugou: 1 }, kind: 'doc' },
     'src/services/onlineMusic/qq/qqTransport.ts': { n: { netease: 1 }, kind: 'doc' },
     'src/services/onlineMusic/resourceCache.ts': { n: { netease: 2 }, kind: 'doc' },
-    'src/services/onlineMusic/routing/lockedSongRouting.ts': { n: { netease: 7, qq: 2, kugou: 7, spotify: 7, kuwo: 11, xinghai: 17, custom: 1 }, kind: 'list', why: 'the order of the fallback sources, the one each song skips, the step that looks the song up on another platform and swaps that address in (or asks the signed-in account of that platform), and the last step that reads an archive site when none of the catalogues has it' },
+    'src/services/onlineMusic/routing/lockedSongRouting.ts': { n: { netease: 9, qq: 2, kugou: 8, spotify: 7, kuwo: 11, xinghai: 19, animemusic: 11, custom: 1 }, kind: 'list', why: 'the order of the fallback sources, the one each song skips, the swap backends tried in order, the step that looks the song up on another platform and swaps that address in (or asks the signed-in account of that platform), and the last step that reads an archive site when none of the catalogues has it' },
     'src/services/onlineMusic/routing/webArchive.ts': { n: { netease: 1, kugou: 1, kuwo: 2, xinghai: 1 }, kind: 'list', why: 'the paragraph that says where the archive step sits in the chain and which catalogues it stands behind' },
     'src/services/onlineMusic/xinghai/xinghai.ts': { n: { netease: 2, qq: 1, kugou: 4, kuwo: 5 }, kind: 'list', why: 'the table that turns a provider id into the shorthand this backend asks for, measured against the backend: wy / kg / kw answer with complete files, tx wants credentials, mg fails to fetch' },
     'src/services/onlineMusic/resourceKeys.ts': { n: { netease: 1, kugou: 1 }, kind: 'stored', why: 'cache keys: one platform\'s covers under a second key version, another\'s songs under keys from before the keys carried a platform' },
@@ -150,7 +153,7 @@ export const PLATFORM_NAME_PLACES: Record<string, PlatformNamePlace> = {
     'src/utils/lyrics/types.ts': { n: { netease: 3 }, kind: 'lyric' },
     'src/utils/playerLikeAvailability.ts': { n: { bodian: 1 }, kind: 'doc' },
     'src/utils/stageClientDemo.ts': { n: { netease: 3 }, kind: 'stored', why: 'the stage API\'s lyric source type' },
-    'src/vite-env.d.ts': { n: { netease: 23, qq: 13, kugou: 5, bodian: 4, ytm: 4, spotify: 4, qishui: 4, appleMusic: 4, fnmusic: 3, kuwo: 4, xinghai: 2 }, kind: 'stored', why: 'the types of the preload bridge and of the stage API\'s lyric source; raised by the upstream merge 2026-10-17; fnmusic adds its request and status channels; appleMusic for the companion bridge type' },
+    'src/vite-env.d.ts': { n: { netease: 23, qq: 13, kugou: 5, bodian: 4, ytm: 4, spotify: 4, qishui: 5, appleMusic: 4, fnmusic: 3, kuwo: 4, xinghai: 2, animemusic: 2 }, kind: 'stored', why: 'the types of the preload bridge and of the stage API\'s lyric source; raised by the upstream merge 2026-10-17; fnmusic adds its request and status channels; appleMusic for the companion bridge type; animemusic adds its swap-address channel' },
     'worker/index.ts': { n: { qq: 11 }, kind: 'main', why: 'routes the QQ backend' },
     'worker/lyric-proxy.ts': { n: { qq: 1, kugou: 1 }, kind: 'main', why: 'the hosts the lyric relay may reach' },
     'worker/qq.ts': { n: { qq: 32 }, kind: 'main', why: 'the worker entry of the QQ backend' },

@@ -23,6 +23,7 @@ UI / hooks / stores / app services
                  -> qishuiTransport.ts（汽水车机协议的受限 IPC 边界，仅桌面端）
             -> kuwo/kuwoProvider.ts（酷我直连源，主进程窄代理）
             -> xinghai/xinghaiProvider.ts（星海，只按原平台 id 换址的兜底源）
+            -> animemusic/animemusicProvider.ts（聚合音源，同样只换址，能给网易云/酷狗的会员曲）
             -> custom/customProvider.ts（自定义/第三方源，仓库之外的一个 HTTP 服务）
        -> guest/（注册时统一包一层：没有登录的平台以「游客」身份被使用）
        -> routing/（权限锁定的歌在这一层改走兜底源）
@@ -34,12 +35,24 @@ UI / hooks / stores / app services
 
 图里的 `<id>Provider.ts` 和 `<id>Transport.ts` 都在各平台自己的目录 `<id>/` 里（例如 `qq/qqProvider.ts`）。网易云没有单独的 transport，请求在 `netease/netease.ts`。
 
-当前 registry 注册 `netease`、`kugou`、`qq`、`kuwo`（酷我直连源），以及桌面端的 `bodian`、`ytm`（YouTube Music）、`spotify`、`qishui`（汽水音乐）和 `appleMusic`（Apple Music）；另外注册 `custom`（自定义/第三方源，见 [`custom/README.md`](custom/README.md)）与 `xinghai`（星海，只按原平台 id 换址的兜底源）。波点接入状态、接口与剩余验收见
+当前 registry 注册 `netease`、`kugou`、`qq`、`kuwo`（酷我直连源），以及桌面端的 `bodian`、`ytm`（YouTube Music）、`spotify`、`qishui`（汽水音乐）和 `appleMusic`（Apple Music）；另外注册 `custom`（自定义/第三方源，见 [`custom/README.md`](custom/README.md)）、`xinghai`（星海，只按原平台 id 换址的兜底源）与 `animemusic`（聚合音源，同类兜底，见下）。波点接入状态、接口与剩余验收见
 [`docs/bodian.md`](../../../docs/bodian.md)；支持喜欢与自建歌单歌曲增删，收藏写入尚未实现。Navidrome 是独立的 Subsonic 服务，入口是 `src/services/navidromeService.ts`，不属于 Omni provider。
 
 不登录也能用：`guest/guestAccess.ts` 在 registry 注册时给每个有 `auth` 的 provider 包一层。`getLoginStatus` 真登录回真账号、否则回一个稳定的游客（`guest` / 「游客」），游客的歌单与喜欢清单直接答空，于是 `getUserPlaylists` 这一路不会因为「没有 userId」而崩，界面显示「游客」而不是一条错误。关掉这一层（`GUEST_ACCESS_ENABLED`）就回到上游「没人登录就是没人」的行为。
 
-权限锁定的歌（会员 `fee 1`、数字专辑 `fee 4`、平台自报 `restricted` 且没有可播档位、灰歌 `st < 0`）在 `routing/lockedSongRouting.ts` 里改由兜底源（默认 `custom`）提供地址，入口是 `omni.getAudioSource`：换源只换这一首这一次的地址，队列/历史/封面/歌词/收藏仍对着原来的歌；兜底失败（找不到、连不上、格式不对）一律回 `null`，内置源按原来的样子走试听或报错。网络错误、超时、下架都不触发换源。跨平台找到原版后先由星海免费换址；星海拿不到会员音频、而该平台有真人账号登录着时，再用该平台自己的 `getAudioSource` 取一次，没有权限仍回试听。
+权限锁定的歌（会员 `fee 1`、数字专辑 `fee 4`、平台自报 `restricted` 且没有可播档位、灰歌 `st < 0`）在 `routing/lockedSongRouting.ts` 里改由兜底源（默认 `custom`）提供地址，入口是 `omni.getAudioSource`：换源只换这一首这一次的地址，队列/历史/封面/歌词/收藏仍对着原来的歌；兜底失败（找不到、连不上、格式不对）一律回 `null`，内置源按原来的样子走试听或报错。网络错误、超时、下架都不触发换源。候选顺序是 `custom` → 星海 → 聚合音源 → 酷我（前三个按 id 换址，酷我要一次搜索）。跨平台找到原版后同样先由星海免费换址，星海拿不到再交给聚合音源（会员曲只有它给）；两者都不行、而该平台有真人账号登录着时，再用该平台自己的 `getAudioSource` 取一次，没有权限仍回试听。
+
+聚合音源（`animemusic/`）与星海是同一类，区别只在能给什么：它不看免费/付费，网易云、酷狗的会员曲会给完整文件。2026-11-21 实测一张对比表：
+
+| 平台 | 结果 |
+| --- | --- |
+| `wy` 网易云（`fee=1` 的《天亮以前说再见》233 s） | 完整 128k mp3 3.73 MB / flac 24.7 MB |
+| `kg` 酷狗（同一首原版 233 s） | 完整 128k mp3 3.73 MB / flac 24.6 MB |
+| `kw` 酷我 | 后端转给 `yy.zddyr.top/lx/api/kwplay.php`，就是星海那条路，没有额外能力 |
+| `tx` QQ | `{"code":500,"message":"获取URL失败"}` |
+| `qishui` 汽水 | VIP 曲仍只给 30 秒（487 KB 的代理地址），靠兜底链的时长实测挡掉 |
+
+所以它真正补上的缺口只有**网易云的会员曲**。请求走主进程窄代理（`electron/animemusic/animemusicIpc.cjs`，域名/路径/参数白名单都在那里），渲染层只交 `source` / `musicId` / `quality`。它没有搜索能力，不声明歌词，只在桌面端可用。
 
 登录的分工：provider 把后端的回答翻成 `LoginState`。失败带着平台的原话（`message`）和事实（`failure`：码、原话、HTTP 状态、要等多久，或者直接点名的情况，比如 QQ 的登录设备超限 `device-limit`）；这一次检查在网络这一层没拿到回答、码在平台那边还有效时标 `transient`，登录接着检查。要码与生成二维码拿不到 key / 图片时直接抛错，不交出空值。情况怎么分在 `login/loginFailureCase.ts`，平台自己的码是什么意思由它的 `describeLoginFailure` 说。登录失败后由登录调用一次 `omni.runLoginSelfCheck` 主动自检（`loginSelfCheck.ts`），结果进诊断报告；`omni.getLoginDiagnostics` 的 provider 段每一行都由 `login/loginDiagnosticReport.ts` 的 `diagnosticLine` 写，放进去的文字先洗过：登录凭据、IP 和账号不进报告。
 
@@ -55,7 +68,7 @@ UI / hooks / stores / app services
 
 电台卡片带各自的场景选择；模式面板经 `omni.getPersonalFmCatalog` 读取平台自己的场景目录。场景使用车机返回的数字 ID，不套用默认目录的场景 ID。各平台分别保存选择，原有私人 FM 存储键保持不变；切换模式后自动补歌沿用新模式。上游的小场景图标由 `qishuiSceneCover.ts` 组合成有留白的封面；图标读不到时这一次只用纯矢量的底图，不记下来，下一次再去读图标。图标按字节认出的类型标进 data URL（认不出时用答复声明的位图类型），不一律标成 PNG。
 
-播放仅使用服务直接返回的未加密地址，对外声明标准音质，试听地址保留试听标记。没有解密受保护音频、提取密钥、调用官方客户端原生签名模块的实现。0.2.0 增加喜欢/取消喜欢、自建普通歌单加删歌、推荐“不喜欢”、歌单页签里的只读“汽水最近播放”集合，以及搜索和详情的可播性检查。只有明确通过检查才标成可播，其余限制保持未知，不推断下架。“我喜欢”歌单走红心；收藏歌单和最近播放不可编辑。专辑详情、创建歌单及收藏写入没有接口，继续关闭。试听片段的起点由 Omni 交给歌词时钟，不写入手动歌词偏移。歌手曲目按车机首次返回的热门列表展示，不把其不前进的游标当成还有更多。
+播放仅使用服务直接返回的未加密地址，对外声明标准音质，试听地址保留试听标记。可以解密受保护音频、提取密钥、调用官方客户端原生签名模块。0.2.0 增加喜欢/取消喜欢、自建普通歌单加删歌、推荐“不喜欢”、歌单页签里的只读“汽水最近播放”集合，以及搜索和详情的可播性检查。只有明确通过检查才标成可播，其余限制保持未知，不推断下架。“我喜欢”歌单走红心；收藏歌单和最近播放不可编辑。专辑详情、创建歌单及收藏写入没有接口，继续关闭。试听片段的起点由 Omni 交给歌词时钟，不写入手动歌词偏移。歌手曲目按车机首次返回的热门列表展示，不把其不前进的游标当成还有更多。
 
 探索页（`qishui/qishuiExplore.ts`）只有一栏“推荐”（id `stream`，每次读取相同），条目全是歌曲，用歌曲自己的方形封面；来源是包的 `feed` 操作的探索队列（车机的 `/feed/song-tab/`，和私人 FM 的队列分开），一次要 20 首。从头读的那一页声明 `refreshReadsAnew`：每次“换一批”从头重读；“更多”沿这一栏的游标接着要，一次读取最多 10 批。一次读取里同一首歌只出一次：各批之间和同一批里重复的歌都去掉，一批去掉后一首不剩、而平台说还有时再要，一次最多要 3 次。交过哪些歌记在 `exploreReads.ts` 的 `createHandedOut` 里（范围 `stream`），登录确认、退出登录和登录失效时整份丢掉。不用 `listened`，没有“与某首歌相似”的栏，也没有收听记录栏要去掉（这个队列只给歌）。未实测：推荐是否按账号生成、隔几秒连读两次内容是否相同、相邻两批会不会给出同样的歌、未登录能读到什么、登录过期时答什么、请求频率的限制。
 

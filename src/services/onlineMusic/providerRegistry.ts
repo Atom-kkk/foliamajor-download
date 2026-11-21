@@ -14,6 +14,7 @@ import { appleMusicProvider as appleMusicBuiltIn } from './appleMusic/appleMusic
 import { fnmusicProvider as fnmusicBuiltIn } from './fnmusic/fnmusicProvider';
 import { customProvider } from './custom/customProvider';
 import { xinghaiProvider } from './xinghai/xinghaiProvider';
+import { animemusicProvider } from './animemusic/animemusicProvider';
 import { withGuestAccess } from './guest/guestAccess';
 
 // src/services/onlineMusic/providerRegistry.ts
@@ -153,3 +154,6 @@ registerOnlineMusicProvider(customProvider);
 // 星海音源：没有搜索能力，只按原平台 id 换地址，作为内置源放出不来时的兜底（见 routing/lockedSongRouting.ts）。
 // 与 kuwo 不重复：它接的是两个 mediaId 能直接换址的平台，酷我由上面的直连源负责。
 registerOnlineMusicProvider(xinghaiProvider);
+// 聚合音源：同样没有搜索，只按原平台 id 换地址；与星海的区别是它能给网易云/酷狗的会员曲。
+// 排在星海之后当第二个兜底候选（见 routing/lockedSongRouting.ts 的 fallbackProviders）。
+registerOnlineMusicProvider(animemusicProvider);

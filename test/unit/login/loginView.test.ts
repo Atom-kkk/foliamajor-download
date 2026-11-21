@@ -352,7 +352,7 @@ describe('the texts the window can ask for', () => {
         expect(notes).toEqual({
             netease: null, kugou: null, bodian: null, fnmusic: null, qishui: null, appleMusic: null,
             // 本分支新增的三个源没有账号（auth: false），登录窗口里没有它们的句子，也就没有第二行。
-            kuwo: null, xinghai: null, custom: null,
+            kuwo: null, xinghai: null, animemusic: null, custom: null,
             // 扫错 App 的那一句按后端有没有 QQ 音乐 App 扫码说（这里还没问到后端）。
             qq: { 'local-service-unavailable': 'home.loginCaseQqRestart', 'wrong-scan-app': 'home.loginCaseQqWrongScanAppMobileOnly', 'device-limit': 'home.loginCaseQqDeviceLimit' },
             ytm: { 'browser-unfinished': 'home.loginCaseYtmUnfinished', 'no-browser': 'home.loginNoBrowserYtm' },

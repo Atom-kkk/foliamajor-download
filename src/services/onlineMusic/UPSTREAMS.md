@@ -146,6 +146,15 @@
 - **接哪些平台**：只接 `netease`（wy）与 `qq`（tx），只列 `mediaId` 能直接当后端 id 用的平台。它**不搜索**，只在播放与下载兜底时按原平台 id 换址；不声明歌词（后端 `lrc` 格式无保证，声明了会盖掉内置源的好词），也不声明 `lossless`。
 - **上游变了怎么跟**：后端换域名或改参数名，改 `src/services/onlineMusic/xinghai/xinghai.ts` 的 URL 构造与 `xinghaiIpc.cjs` 的白名单。`test/unit/onlineMusic/xinghaiSource.test.ts` 覆盖 200 / 403 / 500 三种答复，抓不到后端真的改了协议。
 
+## 聚合音源（`animemusic`）
+
+本分支新增的第二个换址源，只在桌面端可用：后端不放行浏览器侧的预检，渲染层的 POST 会被 CORS 拦掉。
+
+- **上游**：一个 POST 换一个地址 —— `POST https://animemusic.bzxhkj.com/v1/index.php/music/url`，JSON 体 `{"source":"<wy|kg|kw|tx|qishui>","musicId":"…","quality":"<128k|320k|flac|flac24bit>"}`，回 `{"code":200,"url":…}` 或 `{"code":500,"message":"获取URL失败"}`。协议来自 LX 自定义源「lx-animemusic」3.0.1，只取了取址那一段（后端还有搜索接口，Folia 不需要第二个搜索源）。主进程 `electron/animemusic/animemusicIpc.cjs`，通道 `animemusic-url`，参数白名单只有 `source` / `musicId` / `quality`。
+- **与星海的区别**：星海只免费换址，会员曲答「未找到」；这个后端不看免费/付费。2026-11-21 实测：网易云 `fee=1` 的《天亮以前说再见》（233 s）回 128k mp3 3.73 MB 与 flac 24.7 MB；酷狗原版同样完整；**QQ 回 500**；**汽水 VIP 仍只给 30 秒**；酷我则被后端转给 `yy.zddyr.top/lx/api/kwplay.php`，也就是星海那条路。所以它真正补上的只有网易云的会员曲。
+- **怎么用**：`src/services/onlineMusic/animemusic/animemusic.ts` 是协议与解析（平台映射、档位参数、`servedQuality`），`animemusicProvider.ts` 是 provider 实现。它不搜索、不声明歌词、不声明 `hires`（回答里没有档位字段，`.flac` 记无损，mp3 与代理地址按被问的档记但最高到 `high`）。兜底链里排在星海之后、酷我搜索之前；下载同样用它（`src/services/downloads/fullSource.ts`）。
+- **上游变了怎么跟**：后端换域名改 `animemusicIpc.cjs` 的 `HOST` / `API_PATH`；改参数名改 `buildBody` 的白名单与 `animemusic.ts` 的请求体；改回答字段改 `parseAnimemusicAudio`。`test/unit/onlineMusic/animemusicSource.test.ts` 覆盖 200 / 500 / 429 三种答复与参数白名单，抓不到后端真的改了协议。
+
 ## 自定义音源（`custom`）
 
 把仓库之外的一个 HTTP 服务接成 provider，网页版与桌面端都可用（没有 CORS 要求时由服务自己开）。

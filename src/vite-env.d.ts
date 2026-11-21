@@ -843,6 +843,12 @@ declare global {
         albumName?: string;
         quality?: string;
       }) => Promise<{ status: number; text: string }>;
+      /** 聚合音源后端（electron/animemusic/animemusicIpc.cjs）：一个 POST 换一个地址，三个参数都由渲染层给。 */
+      animemusicAudioUrl?: (query: {
+        source: 'wy' | 'kg' | 'kw' | 'tx' | 'qishui';
+        musicId: string;
+        quality?: string;
+      }) => Promise<{ status: number; text: string }>;
       /**
        * 网页存档站（electron/webArchive/webArchiveIpc.cjs）：搜索页 HTML 与取址都由主进程读，
        * 渲染层只给关键词或站内的数字 id。

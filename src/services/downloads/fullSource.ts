@@ -68,9 +68,10 @@ export const resolveFullAudioSource = async (
         if (source) return { source, providerId: own.id };
     }
 
-    // 先按「原平台 id」换地址的源（星海）：id 唯一对应用户听的这首歌，不会串到现场版/翻唱版。
+    // 先按「原平台 id」换地址的源：id 唯一对应用户听的这首歌，不会串到现场版/翻唱版。
     // 播放时走的就是这条，所以下载拿到的与听到的是同一个录音。
-    for (const providerId of ['xinghai'] as const) {
+    // 星海只免费换址，会员曲拿不到；聚合音源能给网易云/酷狗的会员曲，排在它后面补这一档。
+    for (const providerId of ['xinghai', 'animemusic'] as const) {
         const provider = getOnlineMusicProvider(providerId);
         if (!provider) continue;
         if (provider.getAvailability?.().configured === false) continue;

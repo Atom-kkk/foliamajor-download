@@ -48,6 +48,7 @@ describe('what each platform declares for the sign-in window', () => {
             // 平台列表要用同一个字母与颜色。
             kuwo: { letter: '酷', color: '#f59e0b' },
             xinghai: { letter: '星', color: '#6366f1' },
+            animemusic: { letter: '聚', color: '#0ea5e9' },
             custom: { letter: '自', color: '#7c3aed' },
         });
     });

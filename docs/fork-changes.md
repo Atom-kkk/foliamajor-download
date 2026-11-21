@@ -25,28 +25,31 @@ git diff baseline..HEAD --stat         # 改了哪些文件、多少行
 ```text
 src/services/onlineMusic/kuwo/        酷我直连源（搜索 / 取址 / 歌词）
 src/services/onlineMusic/xinghai/     星海音源（只按 id 换地址）
+src/services/onlineMusic/animemusic/  聚合音源（只按 id 换地址，能给网易云/酷狗的会员曲）
 src/services/onlineMusic/custom/      自定义（第三方 HTTP）音源 + 合同文档
 src/services/onlineMusic/routing/     会员 / 付费歌的兜底换源
 src/services/onlineMusic/guest/       游客身份
 src/services/downloads/               下载取址与落盘
 electron/kuwo/  electron/xinghai/     两个音源的主进程窄代理
+electron/animemusic/                  聚合音源的窄代理
 electron/webArchive/  网页存档站（gequbao）的读取与 HTML 解析
 electron/downloads/  electron/audioSizeProbe.cjs   下载与片段字节探测
 ```
 
 ---
 
-## 1. 在线音源：从 6 个变成 9 个
+## 1. 在线音源：从 6 个变成 10 个
 
-上游注册 `netease`、`kugou`、`qq`、`bodian`、`ytm`、`spotify`。本分支追加三个：
+上游注册 `netease`、`kugou`、`qq`、`bodian`、`ytm`、`spotify`。本分支追加四个：
 
 | provider id | 名称 | 能搜索 | 能播放 | 能歌词 | 需要登录 | 仅桌面端 |
 | --- | --- | --- | --- | --- | --- | --- |
 | `kuwo` | 酷我音乐 | 是 | 是 | 是 | 否 | 是 |
 | `xinghai` | 星海音源 | 否 | 是（只换址） | 否 | 否 | 是 |
+| `animemusic` | 聚合音源 | 否 | 是（只换址，含会员曲） | 否 | 否 | 是 |
 | `custom` | 自定义音源 | 是 | 是 | 是（可选端点） | 否 | 否 |
 
-三个源都遵守原有纪律：只经 `omni.ts`，平台规则留在自己的目录，缓存键各自独立
+四个源都遵守原有纪律：只经 `omni.ts`，平台规则留在自己的目录，缓存键各自独立
 （`online:kuwo:<id>`、`online:custom:<id>`），不新增旁路。
 
 ### 1.1 酷我音乐：可独立搜索的第四个直连源
@@ -97,7 +100,45 @@ electron/xinghai/xinghaiIpc.cjs                      主进程窄代理（168 �
 - **不声明歌词能力**：后端回的 `lrc` 格式没有保证，声明了就可能用一份读不出来的词盖掉内置源的好词。
 - **不声明 `lossless`**：后端对 flac 的回应不稳定，理由同酷我。
 
-### 1.3 自定义音源：把仓库之外的一个 HTTP 服务接成 provider
+### 1.3 聚合音源：第二个按 id 换址的兜底，能给会员曲
+
+```text
+src/services/onlineMusic/animemusic/animemusic.ts          协议层（157 行）
+src/services/onlineMusic/animemusic/animemusicProvider.ts  provider 实现（99 行）
+electron/animemusic/animemusicIpc.cjs                      主进程窄代理（148 行）
+```
+
+- 一个 POST 换一个地址：
+
+  ```http
+  POST https://animemusic.bzxhkj.com/v1/index.php/music/url
+    {"source":"wy","musicId":"2659565914","quality":"flac"}
+    -> {"code":200,"url":"…"}
+    -> {"code":500,"message":"获取URL失败"}
+  ```
+
+- **与星海的区别只有一条，但很关键**：星海只免费换址，会员曲答「未找到」；这个后端不看免费/付费，
+  网易云与酷狗的会员曲给完整文件。2026-11-21 实测（同一首《天亮以前说再见》233 s）：
+
+  | 平台 | 结果 |
+  | --- | --- |
+  | `wy` 网易云（`fee=1`） | 128k mp3 3.73 MB / flac 24.7 MB，长度与 233 s 吻合 |
+  | `kg` 酷狗（原版 233 s） | 128k mp3 3.73 MB / flac 24.6 MB |
+  | `kw` 酷我 | 后端转给 `yy.zddyr.top/lx/api/kwplay.php`，就是星海那条路 |
+  | `tx` QQ | `{"code":500,"message":"获取URL失败"}` |
+  | `qishui` 汽水 | VIP 曲仍只给 30 秒（487 KB 的代理地址） |
+
+- **只接 mediaId 能直接当后端 id 的平台**：`netease`(wy)、`kugou`(kg)、`kuwo`(kw)、`qq`(tx)、
+  `qishui`(qishui)。Spotify / YT Music / 波点 / Apple Music 的 id 后端不认识，不列。
+- **必须走主进程**：后端不放行浏览器侧的预检；域名、路径、参数白名单（`source`/`musicId`/`quality`）
+  都在 `electron/animemusic/animemusicIpc.cjs` 里，渲染层只交这三个值。代理还带一条备用通道：
+  `net.fetch` 被系统代理挡掉时改走 Node 的 `https`，与星海代理同理；`429` 等 600 ms 重试一次。
+- **不声明搜索、不声明歌词、不声明 `hires`**：它不产生歌曲，也不回歌词；回答里没有档位字段，
+  `.flac` 记无损，mp3 / 代理地址按被问的档记但最高到 `high`，绝不写成 `hires`。
+- **排在星海之后**：同样是一次换址、同样不会串版本，但它是 POST + 后端解析，比星海的 GET 贵；
+  星海能给的（免费曲）先由星海给，星海给不了的才问它。
+
+### 1.4 自定义音源：把仓库之外的一个 HTTP 服务接成 provider
 
 ```text
 src/services/onlineMusic/custom/customSourceConfig.ts   地址 / 令牌 / 开关（101 行）
@@ -131,7 +172,7 @@ src/components/modal/settings/pages/integration/useCustomSource.ts    表单逻�
   而不是悄悄把 low 记成 high。不声明 `quality` 的服务无法分辨真假，仍按请求档交付（已知缺口）。
 - 没有账号概念（`auth: false`），不参与账号读、歌单、红心、上报。
 
-### 1.4 注册与聚合搜索
+### 1.5 注册与聚合搜索
 
 `src/services/onlineMusic/providerRegistry.ts`
 
@@ -208,9 +249,10 @@ src/services/onlineMusic/routing/lockedSongRouting.ts   （695 行）
 ```text
 1. VITE_LOCKED_SONG_FALLBACK_PROVIDER 指定的源（默认 custom）
 2. 星海音源 —— 按原歌在自己平台上的 id 换地址，不搜索，最快也最稳
-3. 酷我 —— 按「标题 + 歌手」跨源搜索，要一次搜索，放最后
-4. 跨平台同曲 + 换址 —— 网易云 → 酷狗，按顺序各搜一次；星海免费换址拿不到时，若该平台自己登录着，再用该平台的账号取一次（2026-11-14 加，2026-11-20 补登录态）
-5. 网页存档站 —— gequbao.com，三家曲库都没有的歌最后到它这里找（2026-11-14 加）
+3. 聚合音源 —— 同样是按 id 换址，但它能给网易云/酷狗的会员曲（星海只免费换址，2026-11-21 加）
+4. 酷我 —— 按「标题 + 歌手」跨源搜索，要一次搜索，放最后
+5. 跨平台同曲 + 换址 —— 网易云 → 酷狗，按顺序各搜一次；换址后端按「星海 → 聚合音源」试，两者都拿不到时，若该平台自己登录着，再用该平台的账号取一次（2026-11-14 加，2026-11-20 补登录态，2026-11-21 补聚合音源）
+6. 网页存档站 —— gequbao.com，三家曲库都没有的歌最后到它这里找（2026-11-14 加）
 ```
 
 第 4 步是 2026-11-14 实测出来的必要补充：
@@ -226,8 +268,9 @@ src/services/onlineMusic/routing/lockedSongRouting.ts   （695 行）
 这一步对 QQ、波点、Spotify 的歌同样生效：它们的会员歌在本平台只给片段，而曲目在网易云大多有。
 门槛与前几步一致：版本排除 + 85 分 + 实测不是片段。
 
-星海只能换免费音频。目标平台的原版是会员曲时，星海会答「未找到该歌曲」；这时如果该平台有真人
-账号登录着（游客不算），就用该平台自己的 `getAudioSource` 再问一次——有会员权限的账号能拿到
+换址按「星海 → 聚合音源」两级：星海只能换免费音频，目标平台的原版是会员曲时它答「未找到该歌曲」，
+这时交给聚合音源（2026-11-21 加，网易云 `fee=1` 的歌它给完整 mp3 / flac）。两者都拿不到、而该平台
+有真人账号登录着（游客不算）时，就用该平台自己的 `getAudioSource` 再问一次——有会员权限的账号能拿到
 完整地址，没有权限的仍然只得到试听，随后照旧回落。
 
 第 5 步（网页存档站）补的是另一种缺口：**三个曲库都没有这首歌**。「偏爱 / 张芸京」在酷我搜出 20 条
@@ -347,7 +390,8 @@ src/services/downloads/downloadSong.ts  （92 行）
 ```text
 1. 这首歌自己的源
 2. 星海（按原平台 id 换址，不会串到现场版/翻唱版）
-3. 其它能搜索的源：按「标题 + 歌手」搜一次，够像才取址（阈值 85，与播放兜底同一个函数）
+3. 聚合音源（同样按 id 换址，能给网易云/酷狗的会员曲）
+4. 其它能搜索的源：按「标题 + 歌手」搜一次，够像才取址（阈值 85，与播放兜底同一个函数）
 ```
 
 每一步都要「有地址 + 不是 preview + 实测不是片段」，否则换下一个；跨源匹配同样排除
@@ -488,6 +532,8 @@ src/services/onlineMusic/qq/qqLoginFailure.ts
 ```text
 test/unit/onlineMusic/kuwoSource.test.ts     酷我解析（真实回答形状：单引号对象、\'、&nbsp;、20201 这类 bitrate）
 test/unit/onlineMusic/xinghaiSource.test.ts  星海解析（200 / 403 / 500 三种回答）
+test/unit/onlineMusic/animemusicSource.test.ts  聚合音源解析、平台映射、参数白名单与取址
+test/unit/onlineMusic/lockedSongRoutingSwapBackends.test.ts  兜底链里「星海 → 聚合音源」的顺序，含跨平台换址
 test/unit/onlineMusic/audioProbe.test.ts     片段判定阈值
 test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本排除
 ```

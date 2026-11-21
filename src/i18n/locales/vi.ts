@@ -2247,6 +2247,7 @@ export default {
     "fnmusic": "fnOS",
     "kuwo": "Kuwo",
     "xinghai": "Xinghai",
+    "animemusic": "Tổng hợp",
     "custom": "Tùy chỉnh",
   },
   "globalLyricOffset": {

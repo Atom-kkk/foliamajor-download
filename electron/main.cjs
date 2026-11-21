@@ -5067,6 +5067,7 @@ const { createQqBackend } = require('./qq/qqBackend.cjs');
 const { registerLoginBackendIpc } = require('./loginBackendIpc.cjs');
 const { registerKuwoIpc } = require('./kuwo/kuwoIpc.cjs');
 const { registerXinghaiIpc } = require('./xinghai/xinghaiIpc.cjs');
+const { registerAnimemusicIpc } = require('./animemusic/animemusicIpc.cjs');
 const { registerWebArchiveIpc } = require('./webArchive/webArchiveIpc.cjs');
 const { registerAudioDownloadIpc } = require('./downloads/audioDownload.cjs');
 const { registerAudioSizeProbeIpc } = require('./audioSizeProbe.cjs');
@@ -7454,6 +7455,13 @@ registerKuwoIpc({
 // 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认 X-Token / X-Client，OPTIONS 预检回 405，
 // 渲染层带自定义头的请求会被浏览器层拦掉。一条通道，只收参数。
 registerXinghaiIpc({
+  ipcMain,
+  isTrusted: webContents => isTrustedMainWindowContents(webContents),
+});
+
+// 聚合音源后端（electron/animemusic/animemusicIpc.cjs）：一个 POST 换一个地址，后端不放行浏览器侧的
+// 预检，所以同样只能从主进程走。一条通道，只收 source / musicId / quality 三个参数。
+registerAnimemusicIpc({
   ipcMain,
   isTrusted: webContents => isTrustedMainWindowContents(webContents),
 });

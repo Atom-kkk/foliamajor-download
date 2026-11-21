@@ -112,6 +112,8 @@ contextBridge.exposeInMainWorld('electron', {
     kuwoLyric: (query) => ipcRenderer.invoke('kuwo-lyric', query),
     // 星海音源后端（electron/xinghai/xinghaiIpc.cjs）：后端认两个自定义头，预检不通，只能从主进程走。
     xinghaiAudioUrl: (query) => ipcRenderer.invoke('xinghai-url', query),
+    // 聚合音源后端（electron/animemusic/animemusicIpc.cjs）：后端不放行预检，同样只能从主进程走。
+    animemusicAudioUrl: (query) => ipcRenderer.invoke('animemusic-url', query),
     // 网页存档站（electron/webArchive/webArchiveIpc.cjs）：抓取与 HTML 解析都在主进程，页面只给参数。
     webArchiveSearch: (payload) => ipcRenderer.invoke('web-archive-search', payload),
     webArchiveUrl: (payload) => ipcRenderer.invoke('web-archive-url', payload),

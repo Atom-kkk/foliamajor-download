@@ -2247,6 +2247,7 @@ export default {
     "fnmusic": "飞牛",
     "kuwo": "酷我",
     "xinghai": "星海",
+    "animemusic": "聚合",
     "custom": "自定义",
   },
   "globalLyricOffset": {

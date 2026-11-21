@@ -39,6 +39,8 @@ export const PLATFORM_NAMES = {
     // 只认它自己的标识：配置键、客户端/配置/设置组件与 provider，否则满仓都会被记成一个平台。
     kuwo: /kuwo|酷我/i,
     xinghai: /xinghai|星海/i,
+    // 同样只认它自己的标识：`animemusic` 是后端域名与通道名的一部分，`聚合音源` 是它在界面上的名字。
+    animemusic: /animemusic|聚合音源/i,
     custom: /folia\.customSource|customsource(client|config|rows|provider)|usecustomsource|自定义音源/i,
 } as const;
 

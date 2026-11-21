@@ -12,6 +12,7 @@
 export const IPC_CHANNELS = {
     'ai-list-models': { level: 'first-party', why: '现状：有来源校验' },
     'ai-test-connection': { level: 'first-party', why: '现状：有来源校验' },
+    'animemusic-url': { level: 'first-party', why: '聚合音源换址端点（firstParty；参数白名单固定，域名与路径由主进程拼死）' },
     'app-quit': { level: 'first-party', why: '现状：有来源校验' },
     'apple-music-request': { level: 'first-party', why: '经 createCompanionRequestHandler 校验：只给主窗口的主 frame' },
     'automix-beat-this': { level: 'first-party', why: '跑分析模型，占 CPU/GPU（宿主注入的来源校验）' },
