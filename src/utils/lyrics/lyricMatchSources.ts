@@ -1,5 +1,5 @@
 import { getOnlineMusicProvider } from '../../services/onlineMusic/providerRegistry';
-import { useOnlineProviderAccountStore } from '../../stores/useOnlineProviderAccountStore';
+import { hasOnlineProviderUser } from '../../services/onlineMusic/account/accountPresence';
 import type { AmllDbPlatform, LyricData, LyricProviderSource, SongResult } from '../../types';
 import type { ChorusRange, ProviderLyricsResult } from '../../types/onlineMusic';
 import { calculateMatchScore } from './matchScore';
@@ -68,7 +68,7 @@ export const isLyricMatchSourceOffered = (source: LyricProviderSource): boolean 
         const provider = getOnlineMusicProvider(source);
         if (!provider || provider.getAvailability?.().configured === false) return false;
     }
-    return !entry.needsAccount || Boolean(useOnlineProviderAccountStore.getState().accounts[source]?.user);
+    return !entry.needsAccount || hasOnlineProviderUser(source);
 };
 
 const sortByMatchScore = (songs: SongResult[], target: LyricMatchSearchTarget) => (

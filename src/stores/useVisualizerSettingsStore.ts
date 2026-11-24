@@ -16,7 +16,7 @@
 // 「视觉设置必须进 buildCurrentConfig / compressConfig / decompressConfig / validKeys / handleImportConfig」的规则把这两个补进去。
 
 import { create } from 'zustand';
-import { getVisualizerModeLabel } from '../components/visualizer/registry';
+import { resolveVisualizerModeLabel } from '../utils/visualizerModeLabel';
 import type { StoredTuning, VisualizerTuningSettings } from '../components/visualizer/tuningDefinition';
 import { getBackgroundSettingsSlices, getStoredVisualizerTunings } from '../components/visualizer/tuningRegistry';
 import { type LyricRenderQuality, type SmartBeatSettings, type VisualizerBackgroundMode, type VisualizerFrameRate, type VisualizerMode } from '../types';
@@ -214,7 +214,7 @@ export const useVisualizerSettingsStore = create<VisualizerSettingsState>((set, 
             setStatusMessage({
                 type: 'info',
                 text: i18n.t('notifications.visualizerSwitched', {
-                    mode: getVisualizerModeLabel(mode, key => i18n.t(key)),
+                    mode: resolveVisualizerModeLabel(mode, key => i18n.t(key)),
                 }),
             });
         }

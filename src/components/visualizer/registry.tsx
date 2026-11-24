@@ -1,5 +1,6 @@
 import { type VisualizerMode } from '../../types';
 import { BUILTIN_VISUALIZER_MODES, DEFAULT_VISUALIZER_MODE, assertBuiltinModeList } from '../../types/visualizerModes';
+import { setVisualizerModeLabelResolver } from '../../utils/visualizerModeLabel';
 import {
     type VisualizerEntryModule,
     type VisualizerRegistryEntry,
@@ -62,6 +63,10 @@ export const getVisualizerModeLabel = (mode: VisualizerMode, t: (key: string) =>
     const translated = t(entry.labelKey);
     return !translated || translated === entry.labelKey ? entry.labelFallback : translated;
 };
+
+// The store formats "switched visualizer" notices without importing this registry (which eagerly
+// loads every renderer). Hand it the live, mod-aware label lookup once at start-up.
+setVisualizerModeLabelResolver(getVisualizerModeLabel);
 
 export const getVisualizerPreviewStartOffset = (mode: VisualizerMode, loopDuration: number) => {
     if (loopDuration <= 0) {

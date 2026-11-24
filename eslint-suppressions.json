@@ -2766,9 +2766,6 @@
     }
   },
   "src/components/modal/AiHelpPromptModal.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 1
-    },
     "dedicatus/log-module-prefix": {
       "count": 1
     }
@@ -11522,9 +11519,6 @@
     }
   },
   "src/utils/lyrics/lyricMatchSources.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
     }
