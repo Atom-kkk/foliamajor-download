@@ -113,3 +113,12 @@ public/nebbia-strokes.json
 
 # Local tooling data (work logs, scratch), never part of the project.
 .workbuddy/
+
+# One-off packaging scratch: temp electron-builder scripts, generated window icons,
+# tool input-image dumps, throwaway merge build trees and stray test files. Never ship.
+.tmp-build-*.mjs
+build/icon.icns
+build/icon.ico
+.qoder-input-images/
+release-*-merged/
+cw3176gn

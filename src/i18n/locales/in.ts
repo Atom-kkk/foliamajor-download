@@ -2179,7 +2179,7 @@ export default {
     "browserFullscreen": "Layar penuh",
     "madeBy": "Proyek:",
     "contactEmail": "Email kontak",
-    "forkChanges": "Dimodifikasi dari folia-major: dua sumber tambahan (Kuwo, XingHai); lagu berbayar yang hanya dipratinjau dialihkan otomatis; unduh lagu yang sedang diputar; gaya lirik acak per baris.",
+    "forkChanges": "Dimodifikasi dari folia-major: empat sumber tambahan (Kuwo, XingHai, agregat, kustom) plus pencarian agregat; lagu berbayar yang hanya dipratinjau dialihkan berurutan (kustom → XingHai → agregat → Kuwo → ganti lintas platform → arsip web); jelajahi konten publik tanpa masuk; unduh lagu yang sedang diputar; gaya lirik acak per baris.",
     "upstreamProject": "Proyek asli:",
     "joinCommunity": "Gabung komunitas",
     "communityDiscord": "Server Discord",
@@ -4330,6 +4330,29 @@ export default {
       "lyricStyles": {
         "title": "Gaya lirik acak per baris",
         "description": "Di pengaturan tampilan: acak per lagu, atau ganti gaya setiap beberapa baris."
+      }
+    },
+    "v0_8_12": {
+      "intro": "Rilis ini menambah jalur pengalihan: sumber agregat baru bisa mengambil file lengkap untuk lagu VIP di NetEase dan Kugou, dan saat sumber gratis gagal ia mencoba lagi dengan akun yang sedang kamu masuki. Bawaan dari upstream 0.7.29 juga ada gaya lirik baru, \"Metaphor\".",
+      "sources": {
+        "title": "Sumber langsung keempat: agregat",
+        "description": "Mengganti alamat berdasarkan id platform asli, tanpa pencarian. Beda dari XingHai yang hanya menukar audio gratis, sumber ini tidak membatasi lagu VIP — lagu berlabel fee=1 di NetEase atau Kugou bisa kembali sebagai mp3 atau flac penuh. Hanya untuk desktop."
+      },
+      "fallback": {
+        "title": "Akun yang kamu masuki ikut membantu",
+        "description": "Saat lagu berbayar hanya dipratinjau, urutannya: sumber kustom → XingHai → agregat → Kuwo → ganti lintas platform → arsip web. Hanya versi penuh yang diterima — instrumental, live, dan cover ditolak, lalu audio diukur untuk memastikan bukan klip. Saat XingHai maupun agregat gagal dan kamu login di platform lagu itu, ia mencoba lagi dengan akunmu; akun tanpa akses anggota tetap hanya dapat pratinjau."
+      },
+      "crossPlatform": {
+        "title": "Cari lagu yang sama di platform lain",
+        "description": "Bila ketiga pustaka tidak memilikinya, cari lagu yang sama di NetEase dan Kugou lalu ganti alamatnya, tetap XingHai dulu lalu agregat. Saat judul ditulis dalam bahasa lain atau memakai aksara varian, ia memakai \"penyanyi sama persis + durasi sama\", dengan arsip web sebagai jalan terakhir."
+      },
+      "download": {
+        "title": "Unduh lagu yang sedang diputar",
+        "description": "Dua perintah baru di palet: unduh lagu saat ini, dan hapus audio tersimpan lalu muat ulang. Unduhan memakai alamat yang sedang dipakai pemutar dan hanya menerima lagu utuh; bila versinya salah atau rusak, hapus cache sekali lalu ambil lagi."
+      },
+      "lyricStyles": {
+        "title": "Gaya lirik acak per baris",
+        "description": "Aktifkan di pengaturan Tampilan: pilih gaya acak per lagu, atau ganti tiap beberapa baris. Gaya baru \"Metaphor\" dari upstream 0.7.29 juga ada dalam daftar — gumpalan tinta, halftone, dan potongan tajam mengikuti ketukan."
       }
     },
     "v0_7_29": {

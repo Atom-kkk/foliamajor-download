@@ -7,18 +7,21 @@
 
 | 项 | 值 |
 | --- | --- |
-| 上游 | [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major)，`0.7.28` |
+| 上游 | [`chthollyphile/folia-major`](https://github.com/chthollyphile/folia-major)，已合入 `v0.7.29`（最初基于 `0.7.28`） |
 | 许可证 | AGPL-3.0（未改，见 [LICENSE](../LICENSE) 与 [NOTICE](../NOTICE)） |
-| 上游快照 | 首个提交 `baseline: folia-major upstream snapshot`（未做任何修改） |
-| 修改 | 46 个已跟踪文件，`+715 / -88` 行 |
-| 新增 | 26 个文件，约 3,161 行（另有 2 个构建用二进制，不入仓库） |
+| 上游快照 | 最初基于提交 `baseline: folia-major upstream snapshot`（`9133a337`，未做任何修改）；随后整体 rebase 到上游主线，那条快照历史线已不在当前分支上 |
+| 修改 | 91 个已跟踪文件，`+1,511 / -623` 行（相对 `v0.7.29`，随上游同步会变化） |
+| 新增 | 43 个文件，约 6,574 行（相对 `v0.7.29`；另有构建用二进制，不入仓库） |
 
 复核方式：
 
 ```bash
-git log --oneline                      # baseline 之后就是本分支的改动
-git diff baseline..HEAD --stat         # 改了哪些文件、多少行
+git merge-base --is-ancestor v0.7.29 HEAD && echo "基线有效"   # 确认基线仍在历史中
+git diff v0.7.29..HEAD --stat                                   # 改了哪些文件、多少行
 ```
+
+旧的 `git diff baseline..HEAD` 已失效：`baseline` 既不是分支也不是 tag，且那条 rebase 前的快照历史线与
+当前 HEAD 无共同祖先。每次同步上游后，把上面命令里的 tag 换成新合入的版本。
 
 新增目录一览：
 
@@ -581,7 +584,7 @@ test/unit/downloads/downloadSong.test.ts     后缀推断、文件名、版本�
 | `package.json` `productName`（顶层与 `build`） | `Folia Download` | 安装后的应用名，与官方版区分 |
 | `package.json` `build.appId` | `com.foliamajordownload.folia` | 不再与官方安装包同 id，两个包可以共存 |
 | `electron/main.cjs` `WINDOWS_APP_USER_MODEL_ID` | `com.foliamajordownload.folia` | 与 appId 一致，任务栏分组与通知归属跟着走 |
-| `package.json` `version` | `0.8.1` | 高于上游 0.7.28，更新比较不会误判 |
+| `package.json` `version` | `0.8.12` | 高于上游 0.7.29，更新比较不会误判 |
 | `package.json` `repository`、`build.publish` | `Atom-kkk/foliamajor-download` | 打包出的 `app-update.yml` 指向自己，不会去拉上游版本 |
 | `electron/main.cjs` `FOLIA_RELEASES_URL`、`FOLIA_GITHUB_REPOSITORY` | `Atom-kkk/foliamajor-download` | 应用内「查看 Release」「检查更新」不再跳到上游 |
 | `package.json` `author` | `Atom-kkk` + GitHub noreply 邮箱 | 安装包元数据署本分支；deb / rpm 要的 maintainer 邮箱也有了 |

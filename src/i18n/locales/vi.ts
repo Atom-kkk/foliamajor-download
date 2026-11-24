@@ -2179,7 +2179,7 @@ export default {
     "browserFullscreen": "Toàn màn hình",
     "madeBy": "Dự án:",
     "contactEmail": "Email liên hệ",
-    "forkChanges": "Sửa từ folia-major: thêm hai nguồn (Kuwo, XingHai); bài trả phí chỉ được nghe thử sẽ tự chuyển nguồn; tải bài đang phát; kiểu lời bài hát ngẫu nhiên từng dòng.",
+    "forkChanges": "Sửa từ folia-major: thêm bốn nguồn (Kuwo, XingHai, tổng hợp, tùy chỉnh) cùng tìm kiếm tổng hợp; bài trả phí chỉ được nghe thử sẽ đổi nguồn theo thứ tự (tùy chỉnh → XingHai → tổng hợp → Kuwo → đổi liên nền tảng → kho lưu trữ web); xem nội dung công khai khi chưa đăng nhập; tải bài đang phát; kiểu lời bài hát ngẫu nhiên từng dòng.",
     "upstreamProject": "Dự án gốc:",
     "joinCommunity": "Tham gia cộng đồng",
     "communityDiscord": "Máy chủ Discord",
@@ -4330,6 +4330,29 @@ export default {
       "lyricStyles": {
         "title": "Kiểu lời bài hát ngẫu nhiên từng dòng",
         "description": "Trong cài đặt giao diện: ngẫu nhiên theo bài, hoặc đổi kiểu sau vài dòng."
+      }
+    },
+    "v0_8_12": {
+      "intro": "Bản phát hành này kéo dài chuỗi đổi nguồn: nguồn tổng hợp mới có thể lấy file đầy đủ cho bài VIP trên NetEase và Kugou, và khi các nguồn miễn phí thất bại nó thử lại bằng tài khoản bạn đã đăng nhập. Cùng với upstream 0.7.29 có thêm kiểu lời bài hát mới, \"Metaphor\".",
+      "sources": {
+        "title": "Nguồn trực tiếp thứ tư: tổng hợp",
+        "description": "Đổi địa chỉ theo id của nền tảng gốc, không tìm kiếm. Khác với XingHai chỉ đổi audio miễn phí, nguồn này không giới hạn bài VIP — bài gắn fee=1 trên NetEase hoặc Kugou có thể trả về mp3 hoặc flac đầy đủ. Chỉ dùng cho desktop."
+      },
+      "fallback": {
+        "title": "Tài khoản đã đăng nhập cũng được dùng",
+        "description": "Khi bài trả phí chỉ được nghe thử, thứ tự là: nguồn tùy chỉnh → XingHai → tổng hợp → Kuwo → đổi liên nền tảng → kho lưu trữ web. Chỉ nhận bản đầy đủ — loại nhạc khí, live và cover, rồi đo lại audio để chắc không phải đoạn cắt. Khi cả XingHai lẫn tổng hợp đều không được và bạn đã đăng nhập nền tảng của bài đó, nó thử lại bằng tài khoản của bạn; tài khoản không có quyền thành viên vẫn chỉ được nghe thử."
+      },
+      "crossPlatform": {
+        "title": "Tìm cùng một bài ở nền tảng khác",
+        "description": "Khi cả ba kho nhạc đều không có, tìm cùng bài trên NetEase và Kugou rồi đổi địa chỉ, vẫn thử XingHai trước rồi đến tổng hợp. Khi tên bài viết bằng ngôn ngữ khác hoặc dùng chữ biến thể, nó dùng \"cùng nghệ sĩ + cùng độ dài\", với kho lưu trữ web là phương án cuối."
+      },
+      "download": {
+        "title": "Tải bài đang phát",
+        "description": "Hai lệnh mới trong bảng lệnh: tải bài hiện tại, và xóa âm thanh đã lưu rồi tải lại. Bản tải dùng đúng địa chỉ trình phát đang dùng và chỉ nhận bài đầy đủ; nếu sai phiên bản hoặc hỏng, xóa bộ nhớ đệm một lần rồi tải lại."
+      },
+      "lyricStyles": {
+        "title": "Kiểu lời bài hát ngẫu nhiên từng dòng",
+        "description": "Bật trong phần cài đặt Giao diện: chọn ngẫu nhiên mỗi bài, hoặc đổi sau mỗi vài dòng. Kiểu mới \"Metaphor\" từ upstream 0.7.29 cũng có trong danh sách — khối mực, halftone và cắt cảnh theo nhịp."
       }
     },
     "v0_7_29": {

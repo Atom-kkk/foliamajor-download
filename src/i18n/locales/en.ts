@@ -2179,7 +2179,7 @@ export default {
     "browserFullscreen": "Fullscreen",
     "madeBy": "Project:",
     "contactEmail": "Contact email",
-    "forkChanges": "Modified from folia-major: two more sources (Kuwo, XingHai); member songs the platform only previews are re-routed automatically (XingHai, Kuwo, netease / kugou, then a web archive); download the current song; per-line random lyric styles.",
+    "forkChanges": "Modified from folia-major: four more sources (Kuwo, XingHai, aggregate, custom) plus aggregate search; member songs that the platform only previews are re-routed in order (custom → XingHai → aggregate → Kuwo → cross-platform swap → web archive); browse public content while signed out; download the current song; per-line random lyric styles.",
     "upstreamProject": "Original project:",
     "joinCommunity": "Join the community",
     "communityDiscord": "Discord server",
@@ -4330,6 +4330,29 @@ export default {
       "lyricStyles": {
         "title": "Random lyric styles, line by line",
         "description": "In the appearance settings: randomise per song, or switch style every few lines. Keeps a long session from looking the same."
+      }
+    },
+    "v0_8_12": {
+      "intro": "This release extends the fallback chain: a new aggregate source can fetch full files for VIP tracks on NetEase and Kugou, and when free sources come up empty it retries with the account you are signed in with. It also brings in \"Metaphor\", a new lyric style from upstream 0.7.29.",
+      "sources": {
+        "title": "A fourth direct source: aggregate",
+        "description": "Swaps addresses by the original platform id; it does not search. Unlike XingHai, which only swaps free audio, this one does not hold back VIP tracks — songs marked fee=1 on NetEase or Kugou can return a full mp3 or flac. Desktop only."
+      },
+      "fallback": {
+        "title": "Your signed-in account joins the fallback",
+        "description": "When a member song is only a preview, it tries in order: custom source → XingHai → aggregate → Kuwo → cross-platform swap → web archive. Only a full version counts — instrumentals, live and cover versions are excluded, then the audio is measured to rule out clips. When neither XingHai nor the aggregate source can get it and you are signed in to that song's platform, it retries with your account; an account without member access still only gets a preview."
+      },
+      "crossPlatform": {
+        "title": "Find the same song on another platform",
+        "description": "When none of the libraries has it, search NetEase and Kugou for the same song and swap its address, still trying XingHai first and then the aggregate source. When the title is in another language or uses variant characters, it falls back to \"same artist and same length\", with the web archive as a last resort."
+      },
+      "download": {
+        "title": "Download the current song",
+        "description": "Two new commands in the palette: download the current song, and clear its cached audio and reload. The download uses the address the player is already using, and only takes the whole song; if the version is wrong or the file is broken, clear the cache once and fetch again."
+      },
+      "lyricStyles": {
+        "title": "Per-line random lyric styles",
+        "description": "Turn it on in Appearance settings: pick a random style per song, or change styles every few lines. The new \"Metaphor\" style that came in with upstream 0.7.29 is in the list too — ink blobs, halftone dots and hard cuts on the beat."
       }
     },
     "v0_7_29": {
